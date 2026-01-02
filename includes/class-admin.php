@@ -17,6 +17,8 @@ class SBT_Admin {
             add_action('admin_post_sbt_clear_logs', [$this, 'clear_logs']);
             add_action('admin_post_sbt_remove_ip', [$this, 'remove_ip']);
             add_action('admin_post_sbt_unblock_all', [$this, 'unblock_all']);
+
+            add_filter('dashboard_glance_items', [$this, 'add_sbt_glance_item']);
         }
 
     /* ---------------------------
@@ -36,6 +38,182 @@ class SBT_Admin {
     public function register_settings() {
         register_setting('sbt_settings_group', $this->option_key);
     }
+
+
+    public function render_ban_chart() {
+        global $wpdb;
+        $current_time = current_time('mysql');
+
+        // Get ban hours from settings
+        $settings = $this->core->get_settings();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+
+        // Get all active bans
+        $bans = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT banned_at, reason, expires_at FROM {$wpdb->prefix}sbt_blocked_ips
+                 WHERE expires_at > %s
+                 ORDER BY banned_at DESC",
+                $current_time
+            ),
+            ARRAY_A
+        );
+
+        if (empty($bans)) {
+            echo '<p style="text-align: center; padding: 20px; color: #666;">No active bans to display</p>';
+            return;
+        }
+
+        // Group bans by minute and reason type
+        $ban_data = [];
+        $reason_colors = [
+            'Hidden trap' => '#FF6B6B',
+            'Rate limit' => '#FFA500',
+            'No valid JS' => '#4ECDC4',
+            'Outdated browser' => '#95E1D3',
+            'Geo-based' => '#FF69B4',
+            'other' => '#CCCCCC'
+        ];
+
+        foreach ($bans as $ban) {
+            $timestamp = strtotime($ban['banned_at']);
+            $minute = date('H:i', $timestamp);
+            $expires = strtotime($ban['expires_at']);
+
+            // Determine reason category
+            $reason_key = 'other';
+            if (strpos($ban['reason'], 'Hidden trap') !== false) {
+                $reason_key = 'Hidden trap';
+            } elseif (strpos($ban['reason'], 'Rate limit') !== false) {
+                $reason_key = 'Rate limit';
+            } elseif (strpos($ban['reason'], 'No valid JS') !== false) {
+                $reason_key = 'No valid JS';
+            } elseif (strpos($ban['reason'], 'Outdated browser') !== false) {
+                $reason_key = 'Outdated browser';
+            } elseif (strpos($ban['reason'], 'Geo-based') !== false) {
+                $reason_key = 'Geo-based';
+            }
+
+            if (!isset($ban_data[$minute])) {
+                $ban_data[$minute] = [];
+            }
+
+            if (!isset($ban_data[$minute][$reason_key])) {
+                $ban_data[$minute][$reason_key] = [
+                    'count' => 0,
+                    'expires' => $expires,
+                    'color' => $reason_colors[$reason_key]
+                ];
+            }
+
+            $ban_data[$minute][$reason_key]['count']++;
+        }
+
+        // Prepare Chart.js data
+        $minutes = array_keys($ban_data);
+        $reason_types = array_keys($reason_colors);
+
+        $datasets = [];
+        foreach ($reason_types as $reason) {
+            $data = [];
+            $tooltips = [];
+
+            foreach ($minutes as $minute) {
+                if (isset($ban_data[$minute][$reason])) {
+                    $count = $ban_data[$minute][$reason]['count'];
+                    $expires = $ban_data[$minute][$reason]['expires'];
+                    $data[] = $count;
+                    $tooltips[] = $reason . ': ' . $count . ' bans | Expires: ' . date('H:i:s', $expires);
+                } else {
+                    $data[] = 0;
+                    $tooltips[] = '';
+                }
+            }
+
+            $datasets[] = [
+                'label' => $reason,
+                'data' => $data,
+                'backgroundColor' => $reason_colors[$reason],
+                'borderColor' => $reason_colors[$reason],
+                'borderWidth' => 1,
+                'tooltips' => $tooltips
+            ];
+        }
+
+        ?>
+        <div style="margin: 30px 0; padding-right: 10px;">
+            <h2 style="margin-top: 0;">Ban Timeline (Last <?php echo $ban_hours; ?> hours)</h2>
+            <canvas id="sbt_ban_chart" style="max-height: 400px;"></canvas>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('sbt_ban_chart').getContext('2d');
+            const chartData = <?php echo json_encode($datasets); ?>;
+            const minutes = <?php echo json_encode($minutes); ?>;
+
+            // Transform datasets for stacked bar chart
+            const transformedDatasets = chartData.map((dataset, index) => {
+                return {
+                    label: dataset.label,
+                    data: dataset.data,
+                    backgroundColor: dataset.backgroundColor,
+                    borderColor: dataset.borderColor,
+                    borderWidth: 1,
+                    borderSkipped: false
+                };
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: minutes,
+                    datasets: transformedDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'x',
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Time (HH:MM)'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: false,
+                                text: 'Number of Bans'
+                            },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y || 0;
+                                    return label + ': ' + value + ' ban(s)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        </script>
+        <?php
+    }
+
 
     public function settings_page() {
         $opts = $this->core->get_settings();
@@ -238,6 +416,8 @@ class SBT_Admin {
                 <?php submit_button(); ?>
             </form>
 
+            <?php $this->render_ban_chart(); ?>
+
             <h2>Blocked IPs Log (Active Only) — <?= $total_logs ?> total records</h2>
             <?php $this->render_logs_table($logs, $current_page, $total_pages); ?>
         </div>
@@ -356,11 +536,6 @@ class SBT_Admin {
             <button type="submit" class="button button-primary" onclick="return confirm('Unblock all currently banned IPs?');">Unblock All</button>
         </form>
 
-        <form method="post" action="<?= admin_url('admin-post.php') ?>" style="display:inline; margin-left: 10px;">
-            <input type="hidden" name="action" value="sbt_clear_logs">
-            <?php wp_nonce_field('sbt_clear_logs_nonce'); ?>
-            <button type="submit" class="button button-secondary" onclick="return confirm('Clear all logs? Active blocks will remain until they expire.');">Clear All Logs</button>
-        </form>
         <?php
     }
 
@@ -452,5 +627,22 @@ class SBT_Admin {
 
         wp_redirect(admin_url('options-general.php?page=stealth-bot-trap&unblocked_all=1'));
         exit;
+    }
+
+    // Add this new method to SBT_Admin class
+    public function add_sbt_glance_item($items) {
+        if (!current_user_can('manage_options')) {
+            return $items;
+        }
+
+        $blocked_count = $this->core->get_total_active_logs();
+
+        $items[] = sprintf(
+            '<a href="%s">Blocked IPs: %d</a>',
+            admin_url('options-general.php?page=stealth-bot-trap'),
+            $blocked_count
+        );
+
+        return $items;
     }
 }

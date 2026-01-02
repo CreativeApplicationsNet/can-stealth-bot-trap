@@ -1,3 +1,10 @@
+
+
+# CAN Stealth Bot Trap
+
+For years I have been struggling to separate the genuine visitors to CAN from the bots, crawlers and most recently AI. For a site that is 17 years old, and entangled in the infrastructure of the web with thousands of inbound links to it, you can only imagine what a feasting ground it has become for these vile machines. It has also become big business for others, to crawl other people’s websites, at their expense, and then sell on information as “insight”. Well, no more. I took some time this Christmas break, together with Claude AI, and built a plugin that lets me stop these offenders once and for all. I’ve tried to cover many possibilities, many options but not too many. The plugin is clever, layered, offering different types of protections.
+
+
 # CAN Stealth Bot Trap
 
 ## Description
@@ -51,6 +58,8 @@ The plugin operates transparently to real visitors—most legitimate users won't
 
 - **Custom Honeypot URL** - Configure your own unique honeypot path in the admin settings for additional obfuscation.
 
+- **Graph Visualization** - View all the bans on an interactive graph, visualized by colour and type of ban.
+
 ### Performance & Optimization
 
 - **Fast Transient Caching** - Ban statuses cached in transients for instant lookups (no database queries on every request).
@@ -77,6 +86,9 @@ The plugin operates transparently to real visitors—most legitimate users won't
 
 ---
 
+
+![Project Screenshot](preview.png)
+
 ## How It Works
 
 The plugin runs a series of detection checks on every page load, in priority order:
@@ -89,6 +101,10 @@ The plugin runs a series of detection checks on every page load, in priority ord
 6. **Geo-Based Quiz** - Are they from a blocked country?
 
 If any check fails, the visitor is banned and shown either a block page or interactive quiz (depending on your settings).
+
+## Do you use cache?
+
+If you website is cached, and since Wordpress is not doing any work if this is the case and only static pages are served then the check maybe skipped. For now we decided not to implement this check before the cache is loaded since the cost is very low to serve cached page. However, since your cache would be cleared every few hours, the bots trying to access these pages will eventually be blocked either way.
 
 ### Key Design Philosophy
 

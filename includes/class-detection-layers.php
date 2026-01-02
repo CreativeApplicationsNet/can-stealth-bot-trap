@@ -187,10 +187,10 @@ class SBT_Detection_Layers {
 
         $ip = $this->core->get_client_ip();
 
-        // Early exit: Already passed quiz in this session
+        // Check if already passed quiz in this session
         $quiz_passed_key = 'sbt_geo_quiz_passed_' . md5($ip);
         if (get_transient($quiz_passed_key)) {
-            //error_log("[SBT GEO] Skipped: Already passed quiz");
+            error_log("[SBT GEO] Skipped: Already passed quiz");
             return;
         }
 
@@ -203,7 +203,7 @@ class SBT_Detection_Layers {
         // NOW do the expensive API call
         $country = $this->get_country_from_ip($ip);
         if (empty($country)) {
-            error_log("[SBT GEO] Skipped: Could not determine country");
+            //error_log("[SBT GEO] Skipped: Could not determine country");
             return;
         }
 
@@ -212,7 +212,7 @@ class SBT_Detection_Layers {
         $country_upper = strtoupper($country);
 
         if (in_array($country_upper, $countries_list)) {
-            error_log("[SBT GEO] MATCH! Forcing quiz for IP {$ip} from country {$country}");
+            //error_log("[SBT GEO] MATCH! Forcing quiz for IP {$ip} from country {$country}");
             $this->core->ban_ip("Geo-based quiz required (Country: {$country})");
             $this->block('geo_quiz');
         }
@@ -247,7 +247,7 @@ class SBT_Detection_Layers {
             return $country;
         }
 
-        error_log("[SBT GEO] All GeoIP APIs failed for {$ip}");
+        //error_log("[SBT GEO] All GeoIP APIs failed for {$ip}");
         return null;
     }
 

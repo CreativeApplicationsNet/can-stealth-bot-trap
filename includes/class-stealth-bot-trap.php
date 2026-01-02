@@ -403,7 +403,6 @@ class SBT_Stealth_Bot_Trap {
         }
 
         if (!isset($_POST['sbt_quiz_nonce']) || !wp_verify_nonce($_POST['sbt_quiz_nonce'], 'sbt_solve_quiz')) {
-            //error_log('[SBT] Quiz nonce failed');
             return;
         }
 
@@ -411,18 +410,12 @@ class SBT_Stealth_Bot_Trap {
         $quiz_key = 'sbt_quiz_data_' . md5($ip);
         $quiz = get_transient($quiz_key);
 
-        //error_log('[SBT] Quiz submission - IP: ' . $ip . ', Expected: ' . (isset($quiz['expected']) ? $quiz['expected'] : 'NO QUIZ'));
-        //error_log('[SBT] Quiz submission - Submitted answer: ' . $_POST['sbt_quiz_answer']);
-
         if (!$quiz) {
-            //error_log('[SBT] No quiz found for IP: ' . $ip);
             return;
         }
 
         $submitted_answer = (int)$_POST['sbt_quiz_answer'];
         $expected_answer = (int)$quiz['expected'];
-
-        //error_log('[SBT] Comparing: ' . $submitted_answer . ' === ' . $expected_answer . ' ? ' . ($submitted_answer === $expected_answer ? 'YES' : 'NO'));
 
         if ($submitted_answer === $expected_answer) {
             // CORRECT ANSWER
@@ -430,17 +423,20 @@ class SBT_Stealth_Bot_Trap {
             $this->unblock_current_ip();
             delete_transient($quiz_key);
 
-            // Set a flag so detection layers know to skip checks
-            set_transient('sbt_quiz_solved_' . md5($ip), true, 30);
+            // Get ban duration from settings and use it for quiz pass duration
+            $settings = $this->get_settings();
+            $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+            $duration_seconds = $ban_hours * HOUR_IN_SECONDS;
+
+            // Set flag with same duration as ban
+            set_transient('sbt_geo_quiz_passed_' . md5($ip), true, $duration_seconds);
 
             // Use wp_redirect and die to ensure the redirect happens
             wp_redirect($_SERVER['REQUEST_URI']);
             die();
         } else {
             // WRONG ANSWER
-            //error_log('[SBT] Wrong answer. Deleting quiz and redirecting.');
             delete_transient($quiz_key);
-
             wp_redirect($_SERVER['REQUEST_URI']);
             die();
         }
