@@ -87,7 +87,7 @@ The plugin operates transparently to real visitors—most legitimate users won't
 ---
 
 
-![Project Screenshot](preview.png)
+![Project Screenshot](preview.jpg)
 
 ## How It Works
 
