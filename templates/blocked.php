@@ -165,7 +165,7 @@ http_response_code($status_code);
             <p>Please come back later.</p>
         <?php endif; ?>
 
-        <small>CAN—V6 Stealth Bot Block v2.5.0</small>
+        <small><?php bloginfo( 'name' ); ?></small>
     </div>
 </body>
 </html>
