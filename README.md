@@ -6,6 +6,8 @@ CAN Stealth Bot Trap implements a multi-layered defense system that identifies a
 
 The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behavior is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
 
+This plugin is provided free of charge and is open-source. If you are finding it useful, <a href="https://buy.stripe.com/3cscNx6469g00Sc288" target="_blank">please donate</a>. Every little helps!
+
 ## Features
 
 ### Core Protection Layers
