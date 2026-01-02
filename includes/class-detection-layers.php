@@ -78,7 +78,7 @@ class SBT_Detection_Layers {
          // Sanitize to allow only lowercase letters, numbers, and hyphens
          $honeypot_url = sanitize_title($honeypot_url);
 
-         if (strpos($_SERVER['REQUEST_URI'], '/' . $honeypot_url) !== false) {
+         if (strpos($_SERVER['REQUEST_URI'], '/.' . $honeypot_url) !== false) {
              $this->core->ban_ip('Hidden trap URL accessed (' . $honeypot_url . ')');
              $this->block('blocked');
          }
@@ -99,7 +99,7 @@ class SBT_Detection_Layers {
          $honeypot_url = sanitize_title($honeypot_url);
 
          // Inject hidden link into footer - only visible to bots/scanners
-         echo '<!-- Honeypot --><a href="/' . esc_attr($honeypot_url) . '" style="display:none;"></a>';
+         echo '<!-- Honeypot --><a href="/.' . esc_attr($honeypot_url) . '" style="display:none;"></a>';
      }
 
 

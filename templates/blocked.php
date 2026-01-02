@@ -1,6 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+// Prevent W3TC from caching the block/quiz page
+define('DONOTCACHEPAGE', true);
+
 // Prevent caching of this page - browsers must always fetch fresh
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
