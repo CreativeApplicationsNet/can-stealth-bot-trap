@@ -48,6 +48,9 @@ class SBT_Admin {
         $settings = $this->core->get_settings();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
 
+        // Calculate start time
+        $start_time = date('Y-m-d H:i:s', strtotime("-{$ban_hours} hours", strtotime($current_time)));
+
         // Get all active bans
         $bans = $wpdb->get_results(
             $wpdb->prepare(
@@ -59,12 +62,18 @@ class SBT_Admin {
             ARRAY_A
         );
 
-        if (empty($bans)) {
-            echo '<p style="text-align: center; padding: 20px; color: #666;">No active bans to display</p>';
-            return;
+        // Generate all minutes in the time span
+        $all_minutes = [];
+        $current = strtotime($start_time);
+        $end = strtotime($current_time);
+
+        while ($current <= $end) {
+            $minute_key = date('H:i', $current);
+            $all_minutes[$minute_key] = $current;
+            $current += 60;
         }
 
-        // Group bans by minute and reason type
+        // Initialize ban data with all minutes
         $ban_data = [];
         $reason_colors = [
             'Hidden trap' => '#FF6B6B',
@@ -75,38 +84,46 @@ class SBT_Admin {
             'other' => '#CCCCCC'
         ];
 
-        foreach ($bans as $ban) {
-            $timestamp = strtotime($ban['banned_at']);
-            $minute = date('H:i', $timestamp);
-            $expires = strtotime($ban['expires_at']);
-
-            // Determine reason category
-            $reason_key = 'other';
-            if (strpos($ban['reason'], 'Hidden trap') !== false) {
-                $reason_key = 'Hidden trap';
-            } elseif (strpos($ban['reason'], 'Rate limit') !== false) {
-                $reason_key = 'Rate limit';
-            } elseif (strpos($ban['reason'], 'No valid JS') !== false) {
-                $reason_key = 'No valid JS';
-            } elseif (strpos($ban['reason'], 'Outdated browser') !== false) {
-                $reason_key = 'Outdated browser';
-            } elseif (strpos($ban['reason'], 'Geo-based') !== false) {
-                $reason_key = 'Geo-based';
-            }
-
-            if (!isset($ban_data[$minute])) {
-                $ban_data[$minute] = [];
-            }
-
-            if (!isset($ban_data[$minute][$reason_key])) {
-                $ban_data[$minute][$reason_key] = [
+        // Initialize all minutes with zero counts
+        foreach ($all_minutes as $minute => $timestamp) {
+            $ban_data[$minute] = [];
+            foreach (array_keys($reason_colors) as $reason) {
+                $ban_data[$minute][$reason] = [
                     'count' => 0,
-                    'expires' => $expires,
-                    'color' => $reason_colors[$reason_key]
+                    'expires' => 0,
+                    'color' => $reason_colors[$reason]
                 ];
             }
+        }
 
-            $ban_data[$minute][$reason_key]['count']++;
+        // Populate with actual ban data
+        if (!empty($bans)) {
+            foreach ($bans as $ban) {
+                $timestamp = strtotime($ban['banned_at']);
+                $minute = date('H:i', $timestamp);
+
+                // Only include bans within our time range
+                if (isset($all_minutes[$minute])) {
+                    $expires = strtotime($ban['expires_at']);
+
+                    // Determine reason category
+                    $reason_key = 'other';
+                    if (strpos($ban['reason'], 'Hidden trap') !== false) {
+                        $reason_key = 'Hidden trap';
+                    } elseif (strpos($ban['reason'], 'Rate limit') !== false) {
+                        $reason_key = 'Rate limit';
+                    } elseif (strpos($ban['reason'], 'No valid JS') !== false) {
+                        $reason_key = 'No valid JS';
+                    } elseif (strpos($ban['reason'], 'Outdated browser') !== false) {
+                        $reason_key = 'Outdated browser';
+                    } elseif (strpos($ban['reason'], 'Geo-based') !== false) {
+                        $reason_key = 'Geo-based';
+                    }
+
+                    $ban_data[$minute][$reason_key]['count']++;
+                    $ban_data[$minute][$reason_key]['expires'] = $expires;
+                }
+            }
         }
 
         // Prepare Chart.js data
@@ -116,18 +133,10 @@ class SBT_Admin {
         $datasets = [];
         foreach ($reason_types as $reason) {
             $data = [];
-            $tooltips = [];
 
             foreach ($minutes as $minute) {
-                if (isset($ban_data[$minute][$reason])) {
-                    $count = $ban_data[$minute][$reason]['count'];
-                    $expires = $ban_data[$minute][$reason]['expires'];
-                    $data[] = $count;
-                    $tooltips[] = $reason . ': ' . $count . ' bans | Expires: ' . date('H:i:s', $expires);
-                } else {
-                    $data[] = 0;
-                    $tooltips[] = '';
-                }
+                $count = $ban_data[$minute][$reason]['count'];
+                $data[] = $count;
             }
 
             $datasets[] = [
@@ -135,8 +144,7 @@ class SBT_Admin {
                 'data' => $data,
                 'backgroundColor' => $reason_colors[$reason],
                 'borderColor' => $reason_colors[$reason],
-                'borderWidth' => 1,
-                'tooltips' => $tooltips
+                'borderWidth' => 1
             ];
         }
 
@@ -177,6 +185,7 @@ class SBT_Admin {
                     indexAxis: 'x',
                     scales: {
                         x: {
+                            reverse: true,
                             stacked: true,
                             title: {
                                 display: true,
