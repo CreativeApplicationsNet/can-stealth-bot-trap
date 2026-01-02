@@ -240,7 +240,7 @@ Use this plugin freely on your own site, modify it, learn from it, and share it 
 
 ```html
 CAN Stealth Bot Trap by Creative Applications Network
-https://github.com/[your-repo-url]
+https://github.com/CreativeApplicationsNet/can-stealth-bot-trap
 Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 ```
 
@@ -248,7 +248,7 @@ Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 ## Support
 
-For issues, feature requests, or questions, please submit feedback or contact support through your WordPress admin panel.
+For issues, feature requests, or questions, please submit feedback on GitHub.
 
 ---
 
