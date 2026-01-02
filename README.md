@@ -1,10 +1,3 @@
-
-
-# CAN Stealth Bot Trap
-
-For years I have been struggling to separate the genuine visitors to CAN from the bots, crawlers and most recently AI. For a site that is 17 years old, and entangled in the infrastructure of the web with thousands of inbound links to it, you can only imagine what a feasting ground it has become for these vile machines. It has also become big business for others, to crawl other people’s websites, at their expense, and then sell on information as “insight”. Well, no more. I took some time this Christmas break, together with Claude AI, and built a plugin that lets me stop these offenders once and for all. I’ve tried to cover many possibilities, many options but not too many. The plugin is clever, layered, offering different types of protections.
-
-
 # CAN Stealth Bot Trap
 
 ## Description
