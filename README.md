@@ -2,9 +2,11 @@
 
 ## Description
 
-CAN Stealth Bot Trap is a Wordpress plugin that implements a multi-layered defense system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
+CAN Stealth Bot Trap is a Wordpress plugin that implements a multi-layered defence system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
 
-The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behavior is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
+The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behaviour is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
+
+It is aimed for Wordpress sites that have a bot problem, they eat up your bandwidth, crawl endlessly, or scrape your content.
 
 This plugin is provided free of charge and is open-source. If you are finding it useful, <a href="https://buy.stripe.com/3cscNx6469g00Sc288" target="_blank">please donate</a>. Every little helps!
 
@@ -14,7 +16,7 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **Ban Management** - Maintains an active ban list with configurable ban duration (default: 6 hours). Fast transient-based lookups ensure minimal performance impact.
 
-- **Hidden Trap Detection** - Customizable honeypot URL that only automated scanners access. Any bot probing for vulnerabilities is automatically banned. Configure your own unique URL path in the admin settings.
+- **Hidden Trap Detection** - Customisable honeypot URL that only automated scanners access. Any bot probing for vulnerabilities is automatically banned. Configure your own unique URL path in the admin settings.
 
 - **Rate Limiting** - Protects against brute force and resource exhaustion attacks. Configurable requests-per-minute limit (default: 80 RPM). Catches fast scrapers and DDoS attempts.
 
