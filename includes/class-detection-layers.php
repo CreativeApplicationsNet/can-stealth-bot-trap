@@ -174,64 +174,61 @@ class SBT_Detection_Layers {
 
         $settings = $this->core->get_settings();
 
-        // Early exit: Feature disabled
         if (empty($settings['enable_geo_quiz'])) return;
 
-        // Early exit: Quiz mode not enabled
         $block_mode = isset($settings['block_mode']) ? $settings['block_mode'] : 'standard';
         if ($block_mode !== 'quiz') return;
 
-        // Early exit: No countries configured
         $suspicious_countries = isset($settings['geo_quiz_countries']) ? $settings['geo_quiz_countries'] : '';
         if (empty($suspicious_countries)) return;
 
         $ip = $this->core->get_client_ip();
 
-        // Check if already passed quiz in this session
         $quiz_passed_key = 'sbt_geo_quiz_passed_' . md5($ip);
         if (get_transient($quiz_passed_key)) {
-            error_log("[SBT GEO] Skipped: Already passed quiz");
+            //error_log("[SBT GEO] Skipped: Already passed quiz");
             return;
         }
 
-        // Early exit: Already banned (don't check country again)
         if ($this->core->is_banned()) {
-            //error_log("[SBT GEO] Skipped: IP already banned");
             return;
         }
 
-        // NOW do the expensive API call
         $country = $this->get_country_from_ip($ip);
-        if (empty($country)) {
-            //error_log("[SBT GEO] Skipped: Could not determine country");
+
+        // CHANGED: Don't early exit on null/empty - now we need to handle 'UNKNOWN'
+        if ($country === null) {
+            //error_log("[SBT GEO] Skipped: Country lookup returned null");
             return;
         }
 
-        // Parse comma-separated list and normalize
         $countries_list = array_map('trim', explode(',', strtoupper($suspicious_countries)));
         $country_upper = strtoupper($country);
 
+        // Check for matches (blocked countries)
         if (in_array($country_upper, $countries_list)) {
             //error_log("[SBT GEO] MATCH! Forcing quiz for IP {$ip} from country {$country}");
             $this->core->ban_ip("Geo-based quiz required (Country: {$country})");
             $this->block('geo_quiz');
         }
+
+        // NEW: Check for UNKNOWN (couldn't determine location)
+        if ($country === 'UNKNOWN') {
+            //error_log("[SBT GEO] UNKNOWN location! Forcing quiz for IP {$ip}");
+            $this->core->ban_ip("Geo-based quiz required (Country: UNKNOWN)");
+            $this->block('geo_unknown');
+        }
     }
 
     private function get_country_from_ip($ip) {
-        // Try multiple GeoIP sources for reliability
-
         $cache_key = 'sbt_geoip_' . md5($ip);
         $cached = get_transient($cache_key);
 
         if ($cached !== false) {
-            //error_log("[SBT GEO] Using cached country for {$ip}: {$cached}");
             return $cached;
         }
 
-        //error_log("[SBT GEO] No cache found, querying GeoIP API for {$ip}");
-
-        // Try ipapi.co first (most reliable free option, no key needed)
+        // Try ipapi.co first
         $country = $this->query_ipapi_co($ip);
         if ($country) {
             set_transient($cache_key, $country, 24 * HOUR_IN_SECONDS);
@@ -239,7 +236,7 @@ class SBT_Detection_Layers {
             return $country;
         }
 
-        // Fallback to ip2location.io with better error handling
+        // Fallback to ip2location
         $country = $this->query_ip2location($ip);
         if ($country) {
             set_transient($cache_key, $country, 24 * HOUR_IN_SECONDS);
@@ -247,8 +244,10 @@ class SBT_Detection_Layers {
             return $country;
         }
 
-        //error_log("[SBT GEO] All GeoIP APIs failed for {$ip}");
-        return null;
+        // If BOTH fail, return special marker 'UNKNOWN'
+        set_transient($cache_key, 'UNKNOWN', 30 * MINUTE_IN_SECONDS);
+        //error_log("[SBT GEO] All GeoIP APIs failed for {$ip}, cached as UNKNOWN");
+        return 'UNKNOWN';  // <-- CHANGED: was 'return null;'
     }
 
     private function query_ipapi_co($ip) {
@@ -258,7 +257,7 @@ class SBT_Detection_Layers {
         $url = "https://ipapi.co/{$ip}/json/";
 
         $response = wp_remote_get($url, [
-            'timeout'   => 3,
+            'timeout'   => 5,  // <-- INCREASED FROM 3
             'sslverify' => false,
             'headers'   => ['User-Agent' => 'WordPress-SBT/2.3']
         ]);
@@ -297,7 +296,7 @@ class SBT_Detection_Layers {
         $url = "https://ip2location.io/?ip={$ip}&key=demo";
 
         $response = wp_remote_get($url, [
-            'timeout'   => 3,
+            'timeout'   => 5,  // <-- INCREASED FROM 3
             'sslverify' => false,
             'headers'   => ['User-Agent' => 'WordPress-SBT/2.3']
         ]);
