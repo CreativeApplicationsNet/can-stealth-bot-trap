@@ -8,6 +8,8 @@ The plugin operates transparently to real visitors—most legitimate users won't
 
 Note: Althought I found adding disallow:/ user-agents to the robots.txt pretty useless when trying to protect the site from scrapers and bots, it is still highly recommended. There are other many plugins out there that will do this for you.
 
+This plugin is provided free of charge and is open-source. If you are finding it useful, [please donate](https://buy.stripe.com/3cscNx6469g00Sc288). Every little helps!
+
 ## Features
 
 ### Core Protection Layers
