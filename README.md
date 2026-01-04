@@ -2,13 +2,9 @@
 
 ## Description
 
-CAN Stealth Bot Trap is a Wordpress plugin that implements a multi-layered defence system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
+CAN Stealth Bot Trap implements a multi-layered defense system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
 
-The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behaviour is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
-
-It is aimed for Wordpress sites that have a bot problem, they eat up your bandwidth, crawl endlessly, or scrape your content.
-
-This plugin is provided free of charge and is open-source. If you are finding it useful, <a href="https://buy.stripe.com/3cscNx6469g00Sc288" target="_blank">please donate</a>. Every little helps!
+The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behavior is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
 
 ## Features
 
@@ -16,7 +12,7 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **Ban Management** - Maintains an active ban list with configurable ban duration (default: 6 hours). Fast transient-based lookups ensure minimal performance impact.
 
-- **Hidden Trap Detection** - Customisable honeypot URL that only automated scanners access. Any bot probing for vulnerabilities is automatically banned. Configure your own unique URL path in the admin settings.
+- **Hidden Trap Detection** - Customizable honeypot URL that only automated scanners access. Any bot probing for vulnerabilities is automatically banned. Configure your own unique URL path in the admin settings.
 
 - **Rate Limiting** - Protects against brute force and resource exhaustion attacks. Configurable requests-per-minute limit (default: 80 RPM). Catches fast scrapers and DDoS attempts.
 
@@ -30,6 +26,8 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **Geo-Based Quiz** - Optionally and temporarily force visitors from specified countries to solve a verification quiz. It is often that these bots alternate IPs but come from the same country. Here, you can enable this temporarily to catch them all and force the quiz. Uses cached GeoIP lookup to minimize API calls. Perfect for targeting high-risk regions.
 
+- **IP Whitelist** - Maintain a whitelist of trusted IP addresses and CIDR ranges that bypass all protection checks. Perfect for payment processors, third-party webhooks, APIs, and trusted partners. Comes pre-configured with PayPal and Stripe webhook server IPs that you can customize or delete.
+
 ### Block Modes
 
 - **Standard Mode** - Simply denies access with a minimal block page. IP remains banned for the configured duration.
@@ -38,7 +36,11 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 ### Management & Monitoring
 
-- **Admin Dashboard** - Easy-to-use settings page to configure all protection layers and view real-time ban logs.
+- **Admin Dashboard** - Easy-to-use settings page with a protection status summary showing:
+  - Enabled/disabled status of each protection layer with visual indicators
+  - Current active ban count
+  - Ban reason breakdown (top 3 reasons)
+  - Last 24-hour statistics (unique IPs blocked and total blocks)
 
 - **Active Bans Log** - Displays all currently active IP bans with:
   - IP address
@@ -46,6 +48,8 @@ This plugin is provided free of charge and is open-source. If you are finding it
   - Ban timestamp
   - Expiration time
   - Quick unblock buttons
+
+- **Ban Timeline Chart** - Visual timeline of bans over the last configured hours, color-coded by ban reason. Track patterns and see when attacks are happening.
 
 - **Ban Management** - Manually unblock specific IPs or clear all bans without losing configuration.
 
@@ -55,7 +59,26 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **Custom Honeypot URL** - Configure your own unique honeypot path in the admin settings for additional obfuscation.
 
-- **Graph Visualization** - View all the bans on an interactive graph, visualized by colour and type of ban.
+### IP Whitelist Management
+
+- **Pre-configured Trusted IPs** - Comes with PayPal and Stripe webhook server IP ranges pre-loaded, so payments and third-party integrations work out of the box.
+
+- **Easy to Customize** - Simple textarea interface where you can:
+  - Add your own trusted IPs or CIDR ranges
+  - Add inline comments to document why each IP is whitelisted
+  - Delete or modify entries as needed
+  - Support for both exact IPs (`192.168.1.100`) and CIDR ranges (`173.0.80.0/13`)
+
+- **Comment Support** - Use `#` to add explanatory notes:
+  - Full-line comments: `# PayPal Webhook Servers`
+  - Inline comments: `54.187.174.169 # Stripe webhook server`
+
+- **Webhook Bypass** - Whitelisted IPs automatically bypass all protection layers:
+  - Rate limiting
+  - JavaScript verification
+  - Ban checks
+  - Geo-locking
+  - Honeypot traps
 
 ### Performance & Optimization
 
@@ -83,29 +106,24 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 ---
 
-
-![Project Screenshot](preview.jpg)
-
 ## How It Works
 
 The plugin runs a series of detection checks on every page load, in priority order:
 
-1. **Ban Check** - Is this IP already banned?
-2. **Hidden Trap** - Did they access the honeypot URL?
-3. **Rate Limiting** - Too many requests too fast?
-4. **JavaScript Verification** - Can they execute code?
-5. **Outdated Browser** - Are they using a known scraper browser?
-6. **Geo-Based Quiz** - Are they from a blocked country?
+1. **Whitelist Check** - Is this IP whitelisted (payment processor, API, trusted partner)?
+2. **Ban Check** - Is this IP already banned?
+3. **Hidden Trap** - Did they access the honeypot URL?
+4. **Rate Limiting** - Too many requests too fast?
+5. **JavaScript Verification** - Can they execute code?
+6. **Outdated Browser** - Are they using a known scraper browser?
+7. **Geo-Based Quiz** - Are they from a blocked country?
 
-If any check fails, the visitor is banned and shown either a block page or interactive quiz (depending on your settings).
-
-## Do you use cache?
-
-If you website is cached, and since Wordpress is not doing any work if this is the case and only static pages are served then the check maybe skipped. For now we decided not to implement this check before the cache is loaded since the cost is very low to serve cached page. However, since your cache would be cleared every few hours, the bots trying to access these pages will eventually be blocked either way.
+If any check fails, the visitor is banned and shown either a block page or interactive quiz (depending on your settings). Whitelisted IPs skip all checks entirely.
 
 ### Key Design Philosophy
 
 - **Fail-fast approach** - Stop malicious visitors as early as possible
+- **Whitelist-first** - Trusted partners and payment processors always get through
 - **Minimize geo checks** - GeoIP lookups only happen after all local checks pass
 - **Transparent to legitimate users** - Real visitors pass through undetected
 - **Administrator control** - Fine-tune every aspect of protection
@@ -116,32 +134,41 @@ If you website is cached, and since Wordpress is not doing any work if this is t
 
 ### Legitimate Visitor
 ```
-Visitor arrives → Ban check (pass) → Rate limit (pass) → JS check (pass)
+Visitor arrives → Whitelist check (not whitelisted, continue)
+→ Ban check (pass) → Rate limit (pass) → JS check (pass)
 → Browser check (pass) → Geo check (pass) → Allowed through ✅
+```
+
+### Whitelisted IP (Payment Processor, API, etc.)
+```
+Visitor arrives → Whitelist check (PASS) → Bypass all checks → Allowed through ✅
 ```
 
 ### Bot / Scraper
 ```
-Visitor arrives → Ban check → Rate limit (FAIL) → Banned → Block page shown ❌
+Visitor arrives → Whitelist check (not whitelisted, continue)
+→ Ban check → Rate limit (FAIL) → Banned → Block page shown ❌
 ```
 
 ### High-Risk Visitor from Blocked Country (with Geo Enabled)
 ```
-Visitor arrives → Ban check (pass) → Rate limit (pass) → JS check (pass)
+Visitor arrives → Whitelist check (not whitelisted, continue)
+→ Ban check (pass) → Rate limit (pass) → JS check (pass)
 → Browser check (pass) → Geo check (FAIL - Specific country detected) → Show quiz
 → Solves quiz correctly → Unblocked ✅
 ```
 
 ### Visitor Who Fails JavaScript Check
 ```
-Visitor arrives → Ban check (pass) → Rate limit (pass)
+Visitor arrives → Whitelist check (not whitelisted, continue)
+→ Ban check (pass) → Rate limit (pass)
 → JS check (FAIL - no JS execution) → Banned → Block page shown ❌
 ```
 
 ### Honeypot Triggered
 ```
-Visitor accesses custom honeypot URL → Hidden trap check (FAIL)
-→ Banned immediately → Block page shown ❌
+Visitor accesses custom honeypot URL → Whitelist check (not whitelisted, continue)
+→ Hidden trap check (FAIL) → Banned immediately → Block page shown ❌
 ```
 
 ---
@@ -153,6 +180,12 @@ Visitor accesses custom honeypot URL → Hidden trap check (FAIL)
 - Requests per minute limit
 - Test mode (log only, don't block)
 - Custom block page display
+
+### IP Whitelist
+- Pre-loaded with PayPal and Stripe webhook server IPs
+- Add, edit, or delete trusted IP addresses and CIDR ranges
+- Support for inline documentation with `#` comments
+- Perfect for payment processors, webhooks, and APIs
 
 ### Detection Layers (Enable/Disable individually)
 - JavaScript check
@@ -179,6 +212,30 @@ Visitor accesses custom honeypot URL → Hidden trap check (FAIL)
 
 ---
 
+## Admin Dashboard
+
+The admin dashboard provides a quick overview of your site's protection status:
+
+**Protection Status Summary**
+- Visual indicators (🟩/⬜) for each enabled/disabled protection layer
+- Current configured settings (rate limit, ban duration, etc.)
+- Active ban statistics:
+  - Total currently active bans
+  - Top 3 ban reasons with counts
+  - Last 24-hour unique IP count and total blocks
+
+**Ban Timeline Chart**
+- Visual bar chart showing bans over the last configured hours
+- Color-coded by ban reason for easy pattern recognition
+- Interactive tooltips showing details per time period
+
+**Blocked IPs Log**
+- Paginated list of all active bans
+- Quick unblock buttons for individual IPs
+- Bulk unblock all action
+
+---
+
 ## Folder Structure
 
 ```
@@ -187,7 +244,8 @@ can-stealth-bot-trap/
 ├── includes/
 │   ├── class-stealth-bot-trap.php    # Core functionality & database management
 │   ├── class-detection-layers.php    # Detection layer implementation
-│   └── class-admin.php               # WordPress admin interface
+│   ├── class-admin.php               # WordPress admin interface
+│   └── class-admin-dashboard.php     # Admin dashboard summary
 ├── templates/
 │   └── blocked.php                   # Block page & quiz template (customize as you wish)
 └── readme.md                         # Documentation
@@ -200,6 +258,7 @@ can-stealth-bot-trap/
 - **Minimal overhead** - All detection runs on WordPress `init` hook
 - **Local checks only** - Most checks use fast, local PHP operations
 - **Cached wherever possible** - Ban status and GeoIP lookups cached aggressively
+- **Whitelisted IPs bypass all checks** - Payment processors and APIs have zero overhead
 - **No effect on logged-in users** - Protection only applies to public visitors
 
 ---
@@ -240,7 +299,7 @@ Use this plugin freely on your own site, modify it, learn from it, and share it 
 
 ```html
 CAN Stealth Bot Trap by Creative Applications Network
-https://github.com/CreativeApplicationsNet/can-stealth-bot-trap
+https://github.com/[your-repo-url]
 Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 ```
 
@@ -248,7 +307,7 @@ Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 ## Support
 
-For issues, feature requests, or questions, please submit feedback on GitHub.
+For issues, feature requests, or questions, please submit feedback or contact support through your WordPress admin panel.
 
 ---
 
