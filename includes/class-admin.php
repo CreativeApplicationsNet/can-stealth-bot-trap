@@ -7,6 +7,7 @@ class SBT_Admin {
 
     public function __construct($core_instance) {
             $this->core = $core_instance;
+            $this->dashboard = new SBT_Admin_Dashboard($core_instance);
 
             add_action('admin_menu', [$this, 'admin_menu']);
             add_action('admin_init', [$this, 'register_settings']);
@@ -188,7 +189,7 @@ class SBT_Admin {
                             reverse: true,
                             stacked: true,
                             title: {
-                                display: true,
+                                display: false,
                                 text: 'Time (HH:MM)'
                             }
                         },
@@ -245,6 +246,8 @@ class SBT_Admin {
 
             <p>CAN Stealth Bot Trap implements a multi-layered defense system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can damage your site.</p>
 
+            <?php $this->dashboard->render(); ?>
+
             <?php $this->render_notices(); ?>
 
             <form method="post" action="options.php">
@@ -275,6 +278,25 @@ class SBT_Admin {
                             <input type="checkbox" name="<?= $this->option_key ?>[test_mode]"
                                    value="1" <?= checked(!empty($opts['test_mode']), 1) ?>>
                             <p class="description">Enable to see what would be blocked without actually blocking.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>IP Whitelist (Webhooks/APIs/Known)</th>
+                        <td>
+                            <textarea name="<?= $this->option_key ?>[ip_whitelist]"
+                                   style="width: 100%; font-family: monospace;"
+                                   rows="6"><?= esc_textarea($opts['ip_whitelist'] ?? '') ?></textarea>
+                            <p class="description">
+                                Add IP addresses or CIDR ranges to whitelist them from all protection checks. Useful for payment processors, third-party webhooks, and trusted APIs.
+                                <br><strong>Format:</strong> One IP or CIDR range per line
+                                <br><strong>Comments:</strong> Lines starting with # or inline comments (text after #) are ignored
+                                <br><br><strong>Examples:</strong>
+                                <br><code>173.0.80.0/13</code> &ndash; CIDR range
+                                <br><code>192.168.1.100</code> &ndash; Exact IP
+                                <br><code>54.187.174.169 # Stripe webhook server</code> &ndash; Inline comment
+                                <br><strong>Default IPs included:</strong> PayPal and Stripe webhook servers
+                            </p>
                         </td>
                     </tr>
 
@@ -395,7 +417,7 @@ class SBT_Admin {
                         <td>
                             <textarea name="<?= $this->option_key ?>[geo_quiz_countries]"
                                    style="width: 100%;"
-                                   placeholder="CN, RU, VN" rows="3"><?= esc_attr($opts['geo_quiz_countries'] ?? '') ?></textarea>
+                                   placeholder="CN, RU, VN" rows="2"><?= esc_attr($opts['geo_quiz_countries'] ?? '') ?></textarea>
                             <p class="description">
                                 Comma-separated ISO country codes to force quiz on. Visitors from these countries must solve the math quiz.
                                 <br><strong>Example:</strong> CN, RU, VN, KP

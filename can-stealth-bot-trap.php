@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CAN Stealth Bot Trap
  * Description: Silently blocks aggressive crawlers using behavior-based detection for logged-out users only.
- * Version: 2.4.2
+ * Version: 2.5.0
   * Author: Filip Visnjic
  */
 
@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) exit;
 require_once plugin_dir_path(__FILE__) . 'includes/class-stealth-bot-trap.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-detection-layers.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-admin.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-admin-dashboard.php';
 
 // This global variable is the "Brain" of your plugin
 global $sbt_core;
