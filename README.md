@@ -6,6 +6,8 @@ CAN Stealth Bot Trap implements a multi-layered defense system that identifies a
 
 The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behavior is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
 
+Note: Althought I found adding disallow:/ user-agents to the robots.txt pretty useless when trying to protect the site from scrapers and bots, it is still highly recommended. There are other many plugins out there that will do this for you.
+
 ## Features
 
 ### Core Protection Layers

@@ -9,6 +9,32 @@ class SBT_Admin_Dashboard {
     }
 
     /**
+     * Get the next scheduled cleanup time for a specific hook
+     */
+    private function get_next_scheduled_time($hook) {
+        $timestamp = wp_next_scheduled($hook);
+
+        if ($timestamp === false) {
+            return 'Not scheduled';
+        }
+
+        $current_time = current_time('timestamp');
+        $diff = $timestamp - $current_time;
+
+        if ($diff < 0) {
+            return 'Due now';
+        } elseif ($diff < 60) {
+            return 'in ' . $diff . ' seconds';
+        } elseif ($diff < 3600) {
+            $minutes = ceil($diff / 60);
+            return 'in ' . $minutes . ' minute' . ($minutes !== 1 ? 's' : '');
+        } else {
+            $hours = ceil($diff / 3600);
+            return 'in ' . $hours . ' hour' . ($hours !== 1 ? 's' : '');
+        }
+    }
+
+    /**
      * Generate a 500 character summary of current protection status
      */
     public function get_summary() {
@@ -39,7 +65,11 @@ class SBT_Admin_Dashboard {
         $summary = $features_str . "\n\n";
         $summary .= "Active bans: " . number_format($active_bans) . " | ";
         $summary .= implode(" • ", array_slice($ban_breakdown, 0, 3)) . "\n";
-        $summary .= "Last 24h: " . $last_24h_unique . " unique IPs (" . $last_24h_total . " total blocks)";
+        $summary .= "Last 24h: " . $last_24h_unique . " unique IPs (" . $last_24h_total . " total blocks)\n";
+        $summary .= "\n";
+        $summary .= "Next Cleanup Schedules:\n";
+        $summary .= "Expired bans: " . $this->get_next_scheduled_time('sbt_cleanup_expired') . "\n";
+        $summary .= "Transients: " . $this->get_next_scheduled_time('sbt_cleanup_transients');
 
         return $summary;
     }
@@ -55,8 +85,6 @@ class SBT_Admin_Dashboard {
         </div>
         <?php
     }
-
-
 
     /**
      * Get count of bans in last 24 hours
