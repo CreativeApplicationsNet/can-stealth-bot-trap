@@ -171,6 +171,8 @@ Visitor accesses custom honeypot URL → Whitelist check (not whitelisted, conti
 → Hidden trap check (FAIL) → Banned immediately → Block page shown ❌
 ```
 
+![Project Screenshot](preview.jpg)
+
 ---
 
 ## Configuration
