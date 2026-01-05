@@ -129,18 +129,29 @@ class SBT_Detection_Layers {
     /**
      * Simple CIDR IP range checker
      */
-    private function ip_in_cidr($ip, $cidr) {
-        if (strpos($cidr, '/') === false) {
-            return $ip === $cidr;
-        }
+     private function ip_in_cidr($ip, $cidr) {
+         if (strpos($cidr, '/') === false) {
+             return $ip === $cidr;
+         }
 
-        list($subnet, $bits) = explode('/', $cidr);
-        $ip = ip2long($ip);
-        $subnet = ip2long($subnet);
-        $mask = -1 << (32 - $bits);
-        $subnet &= $mask;
-        return ($ip & $mask) === $subnet;
-    }
+         list($subnet, $bits) = explode('/', $cidr);
+         $bits = (int)$bits;  // ← CAST TO INT
+
+         // Validate inputs
+         $ip_long = ip2long($ip);
+         $subnet_long = ip2long($subnet);
+
+         if ($ip_long === false || $subnet_long === false) {  // ← VALIDATE
+             error_log('[SBT] Invalid IP or CIDR range: ' . $ip . ' / ' . $cidr);
+             return false;
+         }
+
+         // Calculate the mask
+         $mask = -1 << (32 - $bits);
+         $subnet_long &= $mask;
+
+         return ($ip_long & $mask) === $subnet_long;
+     }
 
     /* ---------------------------
      * DETECTION LAYERS

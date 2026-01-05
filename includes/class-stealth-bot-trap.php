@@ -126,9 +126,9 @@ class SBT_Stealth_Bot_Trap {
 
          $settings = get_option($this->option_key, $defaults);
 
-         // If ip_whitelist doesn't exist, populate with empty default
+         // If ip_whitelist doesn't exist, populate with defaults
          if (!isset($settings['ip_whitelist'])) {
-             $settings['ip_whitelist'] = "# Add trusted IP addresses or CIDR ranges here\n# Example: 192.168.1.100\n# Example: 10.0.0.0/8";
+             $settings['ip_whitelist'] = "# PayPal Webhook IPs\n173.0.80.0/13\n66.211.169.0/24\n66.211.170.0/24\n\n# Stripe Webhook IPs\n54.187.174.169\n54.187.205.235\n54.187.216.72";
          }
 
          return $settings;
