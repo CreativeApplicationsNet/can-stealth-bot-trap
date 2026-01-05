@@ -128,7 +128,17 @@ class SBT_Stealth_Bot_Trap {
 
          // If ip_whitelist doesn't exist, populate with defaults
          if (!isset($settings['ip_whitelist'])) {
-             $settings['ip_whitelist'] = "# PayPal Webhook IPs\n173.0.80.0/20\n66.211.169.0/24\n66.211.170.0/24\n\n# Stripe Webhook IPs\n54.187.174.169\n54.187.205.235\n54.187.216.72";
+             $settings['ip_whitelist'] = "# PayPal Webhook & IPN IPs\n" .
+                                         "173.0.80.0/20\n" .
+                                         "66.211.168.0/22\n" .
+                                         "64.4.240.0/21\n" .
+                                         "64.4.248.0/22\n" .
+                                         "91.243.72.0/23\n\n" .
+                                         "# Stripe Webhook IPs\n" .
+                                         "54.187.174.169\n" .
+                                         "54.187.205.235\n" .
+                                         "54.187.216.72\n" .
+                                         "# Note: Stripe IPs can change; signature verification is recommended.";
          }
 
          return $settings;
