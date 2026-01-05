@@ -30,7 +30,9 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **Geo-Based Quiz** - Optionally and temporarily force visitors from specified countries to solve a verification quiz. It is often that these bots alternate IPs but come from the same country. Here, you can enable this temporarily to catch them all and force the quiz. Uses cached GeoIP lookup to minimize API calls. Perfect for targeting high-risk regions.
 
-- **IP Whitelist** - Maintain a whitelist of trusted IP addresses and CIDR ranges that bypass all protection checks. Perfect for payment processors, third-party webhooks, APIs, and trusted partners. Comes pre-configured with PayPal and Stripe webhook server IPs that you can customize or delete.
+- **IP Whitelist** - Maintain a whitelist of trusted IP addresses and CIDR ranges that bypass all protection checks. Perfect for payment processors, third-party webhooks, APIs, and trusted partners.
+
+- **Webhook Support** - PayPal, Stripe, and WooCommerce webhooks are automatically whitelisted via their request paths, so they work out of the box without needing IP configuration.
 
 ### Block Modes
 

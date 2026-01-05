@@ -109,30 +109,30 @@ class SBT_Stealth_Bot_Trap {
      * ------------------------- */
 
      public function get_settings() {
-             $defaults = [
-                 'ban_hours' => 6,
-                 'rate_limit' => 80,
-                 'test_mode' => 0,
-                 'enable_js_check' => 1,
-                 'enable_rate_limit' => 1,
-                 'enable_trap' => 1,
-                 'enable_outdated_browser_check' => 1,
-                 'block_mode' => 'standard',
-                 'whitelisted_browsers' => 'brave,firefox',
-                 'enable_geo_quiz' => 0,
-                 'geo_quiz_countries' => '',
-                 'honeypot_url' => 'bot-trap',
-             ];
+         $defaults = [
+             'ban_hours' => 6,
+             'rate_limit' => 80,
+             'test_mode' => 0,
+             'enable_js_check' => 1,
+             'enable_rate_limit' => 1,
+             'enable_trap' => 1,
+             'enable_outdated_browser_check' => 1,
+             'block_mode' => 'standard',
+             'whitelisted_browsers' => 'brave,firefox',
+             'enable_geo_quiz' => 0,
+             'geo_quiz_countries' => '',
+             'honeypot_url' => 'bot-trap',
+         ];
 
-             $settings = get_option($this->option_key, $defaults);
+         $settings = get_option($this->option_key, $defaults);
 
-             // If ip_whitelist doesn't exist, populate with defaults
-             if (!isset($settings['ip_whitelist'])) {
-                 $settings['ip_whitelist'] = "# PayPal Webhook IPs\n173.0.80.0/13\n66.211.169.0/24\n66.211.170.0/24\n\n# Stripe Webhook IPs\n54.187.174.169\n54.187.205.235\n54.187.216.72";
-             }
-
-             return $settings;
+         // If ip_whitelist doesn't exist, populate with empty default
+         if (!isset($settings['ip_whitelist'])) {
+             $settings['ip_whitelist'] = "# Add trusted IP addresses or CIDR ranges here\n# Example: 192.168.1.100\n# Example: 10.0.0.0/8";
          }
+
+         return $settings;
+     }
 
     public function should_protect() {
         return !is_user_logged_in();

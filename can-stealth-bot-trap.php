@@ -2,8 +2,8 @@
 /**
  * Plugin Name: CAN Stealth Bot Trap
  * Description: Silently blocks aggressive crawlers using behavior-based detection for logged-out users only.
- * Version: 2.5.0
-  * Author: Filip Visnjic
+ * Version: 2.5.1
+  * Author: Creative Applications Network
  */
 
 if (!defined('ABSPATH')) exit;
