@@ -75,13 +75,269 @@ class SBT_Admin_Dashboard {
     }
 
     /**
-     * Render the dashboard summary widget
+     * Render the dashboard summary widget with modern design
      */
     public function render() {
+        $settings = $this->core->get_settings();
+        $active_bans = $this->core->get_total_active_logs();
+        $ban_breakdown = $this->get_ban_breakdown_grouped();
+        $last_24h_total = $this->get_bans_last_24h();
+        $last_24h_unique = $this->get_unique_bans_last_24h();
         ?>
-        <div style="margin: 20px 0; line-height: 1.6;">
-            <p style="font-size:14px"><strong>Status</strong></p>
-            <p style="margin: 0; white-space: pre-wrap; word-wrap: break-word;"><?php echo esc_html($this->get_summary()); ?></p>
+        <style>
+            .sbt-dashboard {
+                background: #fff;
+                border-radius: 0px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                overflow: hidden;
+                margin: 20px 0;
+            }
+
+            .sbt-dashboard-header {
+                background: #FFFFFF;
+                color: white;
+                padding: 10px 10px;
+            }
+
+            .sbt-dashboard-header h3 {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            .sbt-dashboard-content {
+                padding: 10px 10px;
+            }
+
+            .sbt-stats-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+                margin-bottom: 20px;
+            }
+
+            .sbt-stat-card {
+                border-left: 4px solid #667eea;
+                padding: 0;
+                padding-left: 10px;
+            }
+
+            .sbt-stat-card.danger {
+                border-left-color: #ff6b6b;
+            }
+
+            .sbt-stat-card.success {
+                border-left-color: #51cf66;
+            }
+
+            .sbt-stat-label {
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-weight: 500;
+                margin-bottom: 8px;
+            }
+
+            .sbt-stat-value {
+                font-size: 32px;
+                font-weight: 700;
+                color: #222;
+                line-height: 1;
+            }
+
+            .sbt-stat-subtext {
+                font-size: 12px;
+                color: #999;
+                margin-top: 8px;
+            }
+
+            .sbt-features-section {
+                margin-bottom: 20px;
+            }
+
+            .sbt-section-title {
+                font-size: 11px;
+                color: #999;
+                margin-bottom: 16px;
+            }
+
+            .sbt-features-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 12px;
+            }
+
+            .sbt-feature-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 12px;
+                border-radius: 4px;
+                background: #f9f9f9;
+                font-size: 13px;
+                color: #555;
+            }
+
+            .sbt-feature-item.active {
+                background: #F1F1F1;
+            }
+
+            .sbt-feature-item.inactive {
+                opacity: 0.6;
+            }
+
+            .sbt-feature-indicator {
+                width: 12px;
+                height: 12px;
+                border-radius: 2px;
+                flex-shrink: 0;
+                background: #ddd;
+            }
+
+            .sbt-feature-indicator.on {
+                background: #51cf66;
+            }
+
+            .sbt-feature-label {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 500;
+            }
+
+            .sbt-feature-detail {
+                font-size: 11px;
+                color: #999;
+            }
+
+            .sbt-cleanup-section {
+                padding-top: 0px;
+            }
+
+            .sbt-cleanup-items {
+                display: grid;
+                gap: 0px;
+            }
+
+            .sbt-cleanup-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0px 0;
+                font-size: 13px;
+            }
+
+            .sbt-cleanup-label {
+                color: #666;
+            }
+
+            .sbt-cleanup-time {
+                color: #999;
+                font-size: 12px;
+                font-weight: 500;
+            }
+
+            @media (max-width: 600px) {
+                .sbt-stats-grid {
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                }
+
+                .sbt-stat-value {
+                    font-size: 28px;
+                }
+
+                .sbt-features-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+        </style>
+
+        <div class="sbt-dashboard">
+            <div class="sbt-dashboard-header">
+                <h3>Protection Status</h3>
+            </div>
+
+            <div class="sbt-dashboard-content">
+                <!-- Stats Section -->
+                <div class="sbt-stats-grid">
+                    <div class="sbt-stat-card success">
+                        <div class="sbt-stat-label">Active Bans</div>
+                        <div class="sbt-stat-value"><?php echo esc_html(number_format($active_bans)); ?></div>
+                        <div class="sbt-stat-subtext">
+                            <?php
+                            $breakdown_items = array_slice($ban_breakdown, 0, 3);
+                            echo esc_html(implode(' • ', $breakdown_items));
+                            ?>
+                        </div>
+                    </div>
+
+                    <div class="sbt-stat-card danger">
+                        <div class="sbt-stat-label">Last 24 Hours</div>
+                        <div class="sbt-stat-value"><?php echo esc_html($last_24h_total); ?></div>
+                        <div class="sbt-stat-subtext"><?php echo esc_html($last_24h_unique); ?> unique IPs blocked</div>
+                    </div>
+                </div>
+
+                <!-- Features Section -->
+                <div class="sbt-features-section">
+                    <div class="sbt-features-grid">
+                        <!-- Rate Limit -->
+                        <div class="sbt-feature-item <?php echo !empty($settings['enable_rate_limit']) ? 'active' : 'inactive'; ?>">
+                            <div class="sbt-feature-indicator <?php echo !empty($settings['enable_rate_limit']) ? 'on' : ''; ?>"></div>
+                            <div>
+                                <div class="sbt-feature-label">Rate Limit</div>
+                            </div>
+                        </div>
+
+                        <!-- JS Check -->
+                        <div class="sbt-feature-item <?php echo !empty($settings['enable_js_check']) ? 'active' : 'inactive'; ?>">
+                            <div class="sbt-feature-indicator <?php echo !empty($settings['enable_js_check']) ? 'on' : ''; ?>"></div>
+                            <div>
+                                <div class="sbt-feature-label">JS Check</div>
+                            </div>
+                        </div>
+
+                        <!-- Honeypot -->
+                        <div class="sbt-feature-item <?php echo !empty($settings['enable_trap']) ? 'active' : 'inactive'; ?>">
+                            <div class="sbt-feature-indicator <?php echo !empty($settings['enable_trap']) ? 'on' : ''; ?>"></div>
+                            <div>
+                                <div class="sbt-feature-label">Honeypot</div>
+                            </div>
+                        </div>
+
+                        <!-- Browser Check -->
+                        <div class="sbt-feature-item <?php echo !empty($settings['enable_outdated_browser_check']) ? 'active' : 'inactive'; ?>">
+                            <div class="sbt-feature-indicator <?php echo !empty($settings['enable_outdated_browser_check']) ? 'on' : ''; ?>"></div>
+                            <div>
+                                <div class="sbt-feature-label">Browser Check</div>
+                            </div>
+                        </div>
+
+                        <!-- Geo-Quiz -->
+                        <div class="sbt-feature-item <?php echo !empty($settings['enable_geo_quiz']) ? 'active' : 'inactive'; ?>">
+                            <div class="sbt-feature-indicator <?php echo !empty($settings['enable_geo_quiz']) ? 'on' : ''; ?>"></div>
+                            <div>
+                                <div class="sbt-feature-label">Geo-Quiz</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cleanup Schedule -->
+                <div class="sbt-cleanup-section">
+                    <div class="sbt-cleanup-items">
+                        <div class="sbt-cleanup-item">
+                            <span class="sbt-cleanup-label">Clean Expired Bans</span>
+                            <span class="sbt-cleanup-time"><?php echo esc_html($this->get_next_scheduled_time('sbt_cleanup_expired')); ?></span>
+                        </div>
+                        <div class="sbt-cleanup-item">
+                            <span class="sbt-cleanup-label">Clean Transients</span>
+                            <span class="sbt-cleanup-time"><?php echo esc_html($this->get_next_scheduled_time('sbt_cleanup_transients')); ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <?php
     }
