@@ -35,6 +35,25 @@ class SBT_Admin_Dashboard {
     }
 
     /**
+     * Get count of IPs that unlocked via quiz in the last X hours
+     */
+    private function get_quiz_unlocks_last_x_hours() {
+        $settings = $this->core->get_settings();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+
+        global $wpdb;
+
+        // Count transients that match the geo_quiz_passed pattern
+        // These are stored as option_name = '_transient_sbt_geo_quiz_passed_*'
+        $count = $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}options
+             WHERE option_name LIKE '_transient_sbt_geo_quiz_passed_%'"
+        );
+
+        return intval($count);
+    }
+
+    /**
      * Generate a 500 character summary of current protection status
      */
     public function get_summary() {
@@ -47,16 +66,16 @@ class SBT_Admin_Dashboard {
         // Build enabled features string with status icons
         $features = [];
 
-        $features[] = (!empty($settings['enable_rate_limit']) ? "🟩" : "⬜️") . " Rate limit (" . $settings['rate_limit'] . "/min)";
-        $features[] = (!empty($settings['enable_js_check']) ? "🟩" : "⬜️") . " JS check";
-        $features[] = (!empty($settings['enable_trap']) ? "🟩" : "⬜️") . " Honeypot";
-        $features[] = (!empty($settings['enable_outdated_browser_check']) ? "🟩" : "⬜️") . " Outdated browser";
+        $features[] = (!empty($settings['enable_rate_limit']) ? "ðŸŸ©" : "â¬œï¸") . " Rate limit (" . $settings['rate_limit'] . "/min)";
+        $features[] = (!empty($settings['enable_js_check']) ? "ðŸŸ©" : "â¬œï¸") . " JS check";
+        $features[] = (!empty($settings['enable_trap']) ? "ðŸŸ©" : "â¬œï¸") . " Honeypot";
+        $features[] = (!empty($settings['enable_outdated_browser_check']) ? "ðŸŸ©" : "â¬œï¸") . " Outdated browser";
 
         if (!empty($settings['enable_geo_quiz'])) {
             $geo_countries = isset($settings['geo_quiz_countries']) ? $settings['geo_quiz_countries'] : '';
-            $features[] = "🟩 Geo-quiz (" . strtoupper(str_replace(', ', ',', $geo_countries)) . ")";
+            $features[] = "ðŸŸ© Geo-quiz (" . strtoupper(str_replace(', ', ',', $geo_countries)) . ")";
         } else {
-            $features[] = "⬜️ Geo-quiz";
+            $features[] = "â¬œï¸ Geo-quiz";
         }
 
         $features_str = implode("   ", $features);
@@ -64,7 +83,7 @@ class SBT_Admin_Dashboard {
         // Build summary
         $summary = $features_str . "\n\n";
         $summary .= "Active bans: " . number_format($active_bans) . " | ";
-        $summary .= implode(" • ", array_slice($ban_breakdown, 0, 3)) . "\n";
+        $summary .= implode(" â€¢ ", array_slice($ban_breakdown, 0, 3)) . "\n";
         $summary .= "Last 24h: " . $last_24h_unique . " unique IPs (" . $last_24h_total . " total blocks)\n";
         $summary .= "\n";
         $summary .= "Next Cleanup Schedules:\n";
@@ -83,6 +102,9 @@ class SBT_Admin_Dashboard {
         $ban_breakdown = $this->get_ban_breakdown_grouped();
         $last_24h_total = $this->get_bans_last_24h();
         $last_24h_unique = $this->get_unique_bans_last_24h();
+        $quiz_unlocks = $this->get_quiz_unlocks_last_x_hours();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+        $quiz_enabled = isset($settings['block_mode']) && $settings['block_mode'] === 'quiz';
         ?>
         <style>
             .sbt-dashboard {
@@ -111,7 +133,7 @@ class SBT_Admin_Dashboard {
 
             .sbt-stats-grid {
                 display: grid;
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(3, 1fr);
                 gap: 24px;
                 margin-bottom: 20px;
             }
@@ -128,6 +150,14 @@ class SBT_Admin_Dashboard {
 
             .sbt-stat-card.success {
                 border-left-color: #51cf66;
+            }
+
+            .sbt-stat-card.disabled {
+                opacity: 0.4;
+            }
+
+            .sbt-stat-card.info {
+                border-left-color: #4c6ef5;
             }
 
             .sbt-stat-label {
@@ -267,15 +297,21 @@ class SBT_Admin_Dashboard {
                         <div class="sbt-stat-subtext">
                             <?php
                             $breakdown_items = array_slice($ban_breakdown, 0, 3);
-                            echo esc_html(implode(' • ', $breakdown_items));
+                            echo esc_html(implode(', ', $breakdown_items));
                             ?>
                         </div>
                     </div>
 
                     <div class="sbt-stat-card danger">
                         <div class="sbt-stat-label">Last 24 Hours</div>
-                        <div class="sbt-stat-value"><?php echo esc_html($last_24h_total); ?></div>
-                        <div class="sbt-stat-subtext"><?php echo esc_html($last_24h_unique); ?> unique IPs blocked</div>
+                        <div class="sbt-stat-value"><?php echo esc_html(number_format($last_24h_total)); ?></div>
+                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($last_24h_unique)); ?> unique IPs blocked</div>
+                    </div>
+
+                    <div class="sbt-stat-card info <?php echo !$quiz_enabled ? 'disabled' : ''; ?>">
+                        <div class="sbt-stat-label">Quiz Unlocks</div>
+                        <div class="sbt-stat-value"><?php echo esc_html(number_format($quiz_unlocks)); ?></div>
+                        <div class="sbt-stat-subtext">Last <?php echo esc_html($ban_hours); ?> hours</div>
                     </div>
                 </div>
 
