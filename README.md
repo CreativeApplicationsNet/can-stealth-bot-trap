@@ -2,7 +2,7 @@
 
 ## Description
 
-CAN Stealth Bot Trap implements a multi-layered defense system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
+CAN Stealth Bot Trap is a Wordpress plugin that implements a multi-layered defense system that identifies and blocks suspicious visitors while allowing legitimate traffic through. Rather than relying on a single detection method, the plugin uses a sophisticated combination of techniques to catch bots, scrapers, and automated attacks before they can cause damage or eat up your bandwidth or CPU.
 
 The plugin operates transparently to real visitors—most legitimate users won't even notice it's running. Only when suspicious behavior is detected does the visitor encounter a challenge (optional math quiz) to prove they're human.
 
