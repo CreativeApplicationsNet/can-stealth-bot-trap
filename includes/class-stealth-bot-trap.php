@@ -81,7 +81,7 @@ class SBT_Stealth_Bot_Trap {
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$wpdb->prefix}{$this->fingerprint_table}
-                 WHERE last_seen < DATE_SUB(%s, INTERVAL 7 DAY)",
+                 WHERE last_seen < DATE_SUB(%s, INTERVAL 1 DAY)",
                 $current_time
             )
         );

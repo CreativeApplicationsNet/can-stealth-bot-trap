@@ -54,28 +54,73 @@ class SBT_Admin_Dashboard {
     }
 
     /**
+     * Get total requests in last X hours (based on ban_hours setting)
+     */
+    private function get_requests_last_x_hours() {
+        global $wpdb;
+        $settings = $this->core->get_settings();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+
+        $time_x_hours_ago = date('Y-m-d H:i:s', current_time('timestamp') - ($ban_hours * 3600));
+
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT SUM(request_count) FROM {$wpdb->prefix}sbt_fingerprints
+                 WHERE last_seen > %s",
+                $time_x_hours_ago
+            )
+        );
+
+        return intval($count ?? 0);
+    }
+
+    /**
+     * Get count of unique IPs in last X hours (based on ban_hours setting)
+     */
+    private function get_unique_ips_last_x_hours() {
+        global $wpdb;
+        $settings = $this->core->get_settings();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+
+        $time_x_hours_ago = date('Y-m-d H:i:s', current_time('timestamp') - ($ban_hours * 3600));
+
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(DISTINCT ip) FROM {$wpdb->prefix}sbt_fingerprints
+                 WHERE last_seen > %s",
+                $time_x_hours_ago
+            )
+        );
+
+        return intval($count);
+    }
+
+
+
+    /**
      * Generate a 500 character summary of current protection status
      */
     public function get_summary() {
         $settings = $this->core->get_settings();
         $active_bans = $this->core->get_total_active_logs();
         $ban_breakdown = $this->get_ban_breakdown_grouped();
-        $last_24h_total = $this->get_bans_last_24h();
-        $last_24h_unique = $this->get_unique_bans_last_24h();
+        $requests_last_x = $this->get_requests_last_x_hours();
+        $unique_ips_last_x = $this->get_unique_ips_last_x_hours();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
 
         // Build enabled features string with status icons
         $features = [];
 
-        $features[] = (!empty($settings['enable_rate_limit']) ? "ðŸŸ©" : "â¬œï¸") . " Rate limit (" . $settings['rate_limit'] . "/min)";
-        $features[] = (!empty($settings['enable_js_check']) ? "ðŸŸ©" : "â¬œï¸") . " JS check";
-        $features[] = (!empty($settings['enable_trap']) ? "ðŸŸ©" : "â¬œï¸") . " Honeypot";
-        $features[] = (!empty($settings['enable_outdated_browser_check']) ? "ðŸŸ©" : "â¬œï¸") . " Outdated browser";
+        $features[] = (!empty($settings['enable_rate_limit']) ? "✓" : "✗") . " Rate limit (" . $settings['rate_limit'] . "/min)";
+        $features[] = (!empty($settings['enable_js_check']) ? "✓" : "✗") . " JS check";
+        $features[] = (!empty($settings['enable_trap']) ? "✓" : "✗") . " Honeypot";
+        $features[] = (!empty($settings['enable_outdated_browser_check']) ? "✓" : "✗") . " Outdated browser";
 
         if (!empty($settings['enable_geo_quiz'])) {
             $geo_countries = isset($settings['geo_quiz_countries']) ? $settings['geo_quiz_countries'] : '';
-            $features[] = "ðŸŸ© Geo-quiz (" . strtoupper(str_replace(', ', ',', $geo_countries)) . ")";
+            $features[] = "✓ Geo-quiz (" . strtoupper(str_replace(', ', ',', $geo_countries)) . ")";
         } else {
-            $features[] = "â¬œï¸ Geo-quiz";
+            $features[] = "✗ Geo-quiz";
         }
 
         $features_str = implode("   ", $features);
@@ -83,8 +128,8 @@ class SBT_Admin_Dashboard {
         // Build summary
         $summary = $features_str . "\n\n";
         $summary .= "Active bans: " . number_format($active_bans) . " | ";
-        $summary .= implode(" â€¢ ", array_slice($ban_breakdown, 0, 3)) . "\n";
-        $summary .= "Last 24h: " . $last_24h_unique . " unique IPs (" . $last_24h_total . " total blocks)\n";
+        $summary .= implode(" • ", array_slice($ban_breakdown, 0, 3)) . "\n";
+        $summary .= "Last {$ban_hours}h: " . $requests_last_x . " requests from " . $unique_ips_last_x . " unique IPs\n";
         $summary .= "\n";
         $summary .= "Next Cleanup Schedules:\n";
         $summary .= "Expired bans: " . $this->get_next_scheduled_time('sbt_cleanup_expired') . "\n";
@@ -100,8 +145,8 @@ class SBT_Admin_Dashboard {
         $settings = $this->core->get_settings();
         $active_bans = $this->core->get_total_active_logs();
         $ban_breakdown = $this->get_ban_breakdown_grouped();
-        $last_24h_total = $this->get_bans_last_24h();
-        $last_24h_unique = $this->get_unique_bans_last_24h();
+        $requests_last_x = $this->get_requests_last_x_hours();
+        $unique_ips_last_x = $this->get_unique_ips_last_x_hours();
         $quiz_unlocks = $this->get_quiz_unlocks_last_x_hours();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
         $quiz_enabled = isset($settings['block_mode']) && $settings['block_mode'] === 'quiz';
@@ -303,9 +348,9 @@ class SBT_Admin_Dashboard {
                     </div>
 
                     <div class="sbt-stat-card danger">
-                        <div class="sbt-stat-label">Last 24 Hours</div>
-                        <div class="sbt-stat-value"><?php echo esc_html(number_format($last_24h_total)); ?></div>
-                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($last_24h_unique)); ?> unique IPs blocked</div>
+                        <div class="sbt-stat-label">Requests (Last <?php echo esc_html($ban_hours); ?>h)</div>
+                        <div class="sbt-stat-value"><?php echo esc_html(number_format($requests_last_x)); ?></div>
+                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($unique_ips_last_x)); ?> unique IPs</div>
                     </div>
 
                     <div class="sbt-stat-card info <?php echo !$quiz_enabled ? 'disabled' : ''; ?>">
@@ -376,73 +421,6 @@ class SBT_Admin_Dashboard {
             </div>
         </div>
         <?php
-    }
-
-    /**
-     * Get count of bans in last 24 hours
-     */
-    private function get_bans_last_24h() {
-        global $wpdb;
-        $time_24h_ago = date('Y-m-d H:i:s', current_time('timestamp') - 86400);
-
-        $count = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}sbt_blocked_ips
-                 WHERE banned_at > %s",
-                $time_24h_ago
-            )
-        );
-
-        return intval($count);
-    }
-
-    /**
-     * Get count of unique IPs banned in last 24 hours
-     */
-    private function get_unique_bans_last_24h() {
-        global $wpdb;
-        $time_24h_ago = date('Y-m-d H:i:s', current_time('timestamp') - 86400);
-
-        $count = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(DISTINCT ip) FROM {$wpdb->prefix}sbt_blocked_ips
-                 WHERE banned_at > %s",
-                $time_24h_ago
-            )
-        );
-
-        return intval($count);
-    }
-
-    /**
-     * Get percentage of a reason in last 24 hours
-     */
-    private function get_last_24h_percentage($reason) {
-        global $wpdb;
-        $time_24h_ago = date('Y-m-d H:i:s', current_time('timestamp') - 86400);
-
-        $total = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}sbt_blocked_ips
-                 WHERE banned_at > %s",
-                $time_24h_ago
-            )
-        );
-
-        if ($total == 0) {
-            return 0;
-        }
-
-        $count = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}sbt_blocked_ips
-                 WHERE banned_at > %s AND reason = %s",
-                $time_24h_ago,
-                $reason
-            )
-        );
-
-        return round(($count / $total) * 100);
     }
 
     /**
