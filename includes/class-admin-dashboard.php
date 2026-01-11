@@ -75,9 +75,9 @@ class SBT_Admin_Dashboard {
     }
 
     /**
-     * Get count of unique IPs in last X hours (based on ban_hours setting)
+     * Get count of repeat offenders (IPs with multiple distinct request patterns) in last X hours
      */
-    private function get_unique_ips_last_x_hours() {
+    private function get_repeat_offenders_last_x_hours() {
         global $wpdb;
         $settings = $this->core->get_settings();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
@@ -86,16 +86,19 @@ class SBT_Admin_Dashboard {
 
         $count = $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(DISTINCT ip) FROM {$wpdb->prefix}sbt_fingerprints
-                 WHERE last_seen > %s",
+                "SELECT COUNT(*) FROM (
+                    SELECT ip, COUNT(DISTINCT fingerprint) as pattern_count
+                    FROM {$wpdb->prefix}sbt_fingerprints
+                    WHERE last_seen > %s
+                    GROUP BY ip
+                    HAVING pattern_count > 1
+                ) as repeat_ips",
                 $time_x_hours_ago
             )
         );
 
         return intval($count);
     }
-
-
 
     /**
      * Generate a 500 character summary of current protection status
@@ -104,8 +107,8 @@ class SBT_Admin_Dashboard {
         $settings = $this->core->get_settings();
         $active_bans = $this->core->get_total_active_logs();
         $ban_breakdown = $this->get_ban_breakdown_grouped();
-        $requests_last_x = $this->get_requests_last_x_hours();
-        $unique_ips_last_x = $this->get_unique_ips_last_x_hours();
+        $fingerprints_last_x = $this->get_fingerprints_last_x_hours();
+        $repeat_offenders = $this->get_repeat_offenders_last_x_hours();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
 
         // Build enabled features string with status icons
@@ -129,7 +132,7 @@ class SBT_Admin_Dashboard {
         $summary = $features_str . "\n\n";
         $summary .= "Active bans: " . number_format($active_bans) . " | ";
         $summary .= implode(" • ", array_slice($ban_breakdown, 0, 3)) . "\n";
-        $summary .= "Last {$ban_hours}h: " . $requests_last_x . " requests from " . $unique_ips_last_x . " unique IPs\n";
+        $summary .= "Last {$ban_hours}h: " . $requests_last_x . " requests | " . $repeat_offenders . " repeat offenders\n";
         $summary .= "\n";
         $summary .= "Next Cleanup Schedules:\n";
         $summary .= "Expired bans: " . $this->get_next_scheduled_time('sbt_cleanup_expired') . "\n";
@@ -146,7 +149,7 @@ class SBT_Admin_Dashboard {
         $active_bans = $this->core->get_total_active_logs();
         $ban_breakdown = $this->get_ban_breakdown_grouped();
         $requests_last_x = $this->get_requests_last_x_hours();
-        $unique_ips_last_x = $this->get_unique_ips_last_x_hours();
+        $repeat_offenders = $this->get_repeat_offenders_last_x_hours();
         $quiz_unlocks = $this->get_quiz_unlocks_last_x_hours();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
         $quiz_enabled = isset($settings['block_mode']) && $settings['block_mode'] === 'quiz';
@@ -312,6 +315,26 @@ class SBT_Admin_Dashboard {
                 font-weight: 500;
             }
 
+            .sbt-repeat-offenders-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                font-size: 13px;
+                border-top: 1px solid #f0f0f0;
+                margin-top: 8px;
+            }
+
+            .sbt-repeat-offenders-label {
+                color: #666;
+            }
+
+            .sbt-repeat-offenders-value {
+                color: #ff6b6b;
+                font-weight: 700;
+                font-size: 18px;
+            }
+
             @media (max-width: 600px) {
                 .sbt-stats-grid {
                     grid-template-columns: 1fr;
@@ -350,7 +373,7 @@ class SBT_Admin_Dashboard {
                     <div class="sbt-stat-card danger">
                         <div class="sbt-stat-label">Requests (Last <?php echo esc_html($ban_hours); ?>h)</div>
                         <div class="sbt-stat-value"><?php echo esc_html(number_format($requests_last_x)); ?></div>
-                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($unique_ips_last_x)); ?> unique IPs</div>
+                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($repeat_offenders)); ?> repeat offenders</div>
                     </div>
 
                     <div class="sbt-stat-card info <?php echo !$quiz_enabled ? 'disabled' : ''; ?>">

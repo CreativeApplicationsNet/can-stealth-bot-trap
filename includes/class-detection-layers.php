@@ -263,18 +263,19 @@ class SBT_Detection_Layers {
         if (!$this->core->should_protect()) return;
         if ($this->core->is_whitelisted_bot()) return;
 
+        // CRITICAL: Check whitelist EARLY, before any other checks
+        if ($this->is_whitelisted_ip()) return;
+        if ($this->is_webhook_request()) return;
+
         $settings = $this->core->get_settings();
         if (empty($settings['enable_js_check'])) return;
-
-        // SKIP PROTECTION FOR WEBHOOKS
-        if ($this->is_webhook_request()) return;
-        if ($this->is_whitelisted_ip()) return;
 
         // Skip JS check for whitelisted browsers
         if ($this->is_whitelisted_browser()) {
             return;
         }
 
+        $ip = $this->core->get_client_ip();
         $uri = $_SERVER['REQUEST_URI'];
 
         if (strpos($uri, '/wp-json/') !== false && strpos($uri, '/wp/v2/') === false) {
