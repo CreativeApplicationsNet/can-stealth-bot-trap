@@ -341,11 +341,11 @@ class SBT_Stealth_Bot_Trap {
         );
 
         // Delete expired geo quiz passed transients
-        $wpdb->query(
-            "DELETE FROM {$wpdb->prefix}options
-             WHERE option_name LIKE '_transient_sbt_geo_quiz_passed_%'
-             OR option_name LIKE '_transient_timeout_sbt_geo_quiz_passed_%'"
-        );
+        // $wpdb->query(
+        //     "DELETE FROM {$wpdb->prefix}options
+        //      WHERE option_name LIKE '_transient_sbt_geo_quiz_passed_%'
+        //      OR option_name LIKE '_transient_timeout_sbt_geo_quiz_passed_%'"
+        // );
 
         // Delete expired GeoIP cache transients
         $wpdb->query(
