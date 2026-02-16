@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) exit;
 
 class SBT_Admin {
     private $core;
+    private $dashboard;   
     private $option_key = 'sbt_settings';
 
     public function __construct($core_instance) {

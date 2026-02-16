@@ -14,6 +14,8 @@ class SBT_Detection_Layers {
         '/?wc-api=stripe',               // Legacy WooCommerce Stripe
         '/paypal-webhook',               // Custom PayPal endpoints
         '/stripe-webhook',               // Custom Stripe endpoints
+        'admin-ajax.php',  // ← Whitelist all AJAX
+        '/wp-json/can/v1/update-profile',
     ];
 
     public function __construct() {
@@ -53,6 +55,19 @@ class SBT_Detection_Layers {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $method = $_SERVER['REQUEST_METHOD'] ?? '';
 
+
+        // Allow REST API requests with Basic Auth (for mobile apps like CAN iOS)
+        // Check this BEFORE the POST method check since REST API uses GET
+        if (strpos($uri, '/wp-json/wp/v2/') !== false || strpos($uri, '/wp-json/can/v1/') !== false) {
+            if (isset($_SERVER['HTTP_AUTHORIZATION']) && strpos($_SERVER['HTTP_AUTHORIZATION'], 'Basic ') === 0) {
+                return true;
+            }
+            // Also check for PHP_AUTH_USER which some servers use
+            if (isset($_SERVER['PHP_AUTH_USER'])) {
+                return true;
+            }
+        }
+
         // Webhooks are almost always POST requests
         if ($method !== 'POST') {
             return false;
@@ -61,7 +76,7 @@ class SBT_Detection_Layers {
         // Check against known webhook paths
         foreach ($this->webhook_paths as $path) {
             if (strpos($uri, $path) !== false) {
-                error_log('[SBT] Webhook detected and whitelisted: ' . $uri);
+                //error_log('[SBT] Webhook detected and whitelisted: ' . $uri);
                 return true;
             }
         }
@@ -111,13 +126,13 @@ class SBT_Detection_Layers {
             // Check for CIDR range
             if (strpos($line, '/') !== false) {
                 if ($this->ip_in_cidr($ip, $line)) {
-                    error_log('[SBT] IP whitelisted (CIDR): ' . $ip . ' matched ' . $line);
+                    //error_log('[SBT] IP whitelisted (CIDR): ' . $ip . ' matched ' . $line);
                     return true;
                 }
             } else {
                 // Exact match
                 if ($ip === $line) {
-                    error_log('[SBT] IP whitelisted (exact): ' . $ip);
+                    //error_log('[SBT] IP whitelisted (exact): ' . $ip);
                     return true;
                 }
             }
@@ -142,7 +157,7 @@ class SBT_Detection_Layers {
          $subnet_long = ip2long($subnet);
 
          if ($ip_long === false || $subnet_long === false) {  // ← VALIDATE
-             error_log('[SBT] Invalid IP or CIDR range: ' . $ip . ' / ' . $cidr);
+             //error_log('[SBT] Invalid IP or CIDR range: ' . $ip . ' / ' . $cidr);
              return false;
          }
 

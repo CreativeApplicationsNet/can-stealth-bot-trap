@@ -101,6 +101,32 @@ class SBT_Admin_Dashboard {
     }
 
     /**
+     * Get count of IPs that have unlocked the quiz multiple times (repeat unlocks)
+     * This shows IPs that have solved the quiz multiple times, indicating they keep getting blocked
+     */
+    private function get_repeat_quiz_unlocks() {
+        global $wpdb;
+        $settings = $this->core->get_settings();
+        $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
+        $time_x_hours_ago = date('Y-m-d H:i:s', current_time('timestamp') - ($ban_hours * 3600));
+
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM (
+                    SELECT ip, COUNT(*) as ban_count
+                    FROM {$wpdb->prefix}sbt_blocked_ips
+                    WHERE banned_at > %s
+                    GROUP BY ip
+                    HAVING ban_count > 1
+                ) as repeat_bans",
+                $time_x_hours_ago
+            )
+        );
+
+        return intval($count);
+    }
+
+    /**
      * Generate a 500 character summary of current protection status
      */
     public function get_summary() {
@@ -150,6 +176,7 @@ class SBT_Admin_Dashboard {
         $ban_breakdown = $this->get_ban_breakdown_grouped();
         $requests_last_x = $this->get_requests_last_x_hours();
         $repeat_offenders = $this->get_repeat_offenders_last_x_hours();
+        $repeat_quiz_unlocks = $this->get_repeat_quiz_unlocks();
         $quiz_unlocks = $this->get_quiz_unlocks_last_x_hours();
         $ban_hours = isset($settings['ban_hours']) ? (int)$settings['ban_hours'] : 6;
         $quiz_enabled = isset($settings['block_mode']) && $settings['block_mode'] === 'quiz';
@@ -371,7 +398,7 @@ class SBT_Admin_Dashboard {
                     </div>
 
                     <div class="sbt-stat-card danger">
-                        <div class="sbt-stat-label">Requests (Last <?php echo esc_html($ban_hours); ?>h)</div>
+                        <div class="sbt-stat-label">Requests</div>
                         <div class="sbt-stat-value"><?php echo esc_html(number_format($requests_last_x)); ?></div>
                         <div class="sbt-stat-subtext"><?php echo esc_html(number_format($repeat_offenders)); ?> repeat offenders</div>
                     </div>
@@ -379,7 +406,8 @@ class SBT_Admin_Dashboard {
                     <div class="sbt-stat-card info <?php echo !$quiz_enabled ? 'disabled' : ''; ?>">
                         <div class="sbt-stat-label">Quiz Unlocks</div>
                         <div class="sbt-stat-value"><?php echo esc_html(number_format($quiz_unlocks)); ?></div>
-                        <div class="sbt-stat-subtext">Last <?php echo esc_html($ban_hours); ?> hours</div>
+                        <div class="sbt-stat-subtext"><?php echo esc_html(number_format($repeat_quiz_unlocks)); ?> repeat unlocks</div>
+                        <!-- <div class="sbt-stat-subtext">Last <//?php echo esc_html($ban_hours); ?> hours</div> -->
                     </div>
                 </div>
 

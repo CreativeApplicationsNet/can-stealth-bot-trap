@@ -354,7 +354,7 @@ class SBT_Stealth_Bot_Trap {
              OR option_name LIKE '_transient_timeout_sbt_geoip_%'"
         );
 
-        error_log('[SBT] Cleaned up all expired transients (bans, rate limits, quiz data, geo flags, and geoip cache)');
+        //error_log('[SBT] Cleaned up all expired transients (bans, rate limits, quiz data, geo flags, and geoip cache)');
     }
 
     public function preview_block_page() {
@@ -441,7 +441,7 @@ class SBT_Stealth_Bot_Trap {
 
         if ($submitted_answer === $expected_answer) {
             // CORRECT ANSWER
-            error_log('[SBT] Correct answer! Unblocking IP: ' . $ip);
+            //error_log('[SBT] Correct answer! Unblocking IP: ' . $ip);
             $this->unblock_current_ip();
             delete_transient($quiz_key);
 
@@ -483,7 +483,7 @@ class SBT_Stealth_Bot_Trap {
         $still_banned = get_transient('sbt_ban_' . md5($ip));
         //error_log("[SBT] Transient still exists after delete: " . ($still_banned ? 'YES' : 'NO'));
 
-        error_log("[SBT] IP {$ip} unblocked via quiz.");
+        //error_log("[SBT] IP {$ip} unblocked via quiz.");
     }
 
     // Add this to class-stealth-bot-trap.php:
@@ -501,6 +501,6 @@ class SBT_Stealth_Bot_Trap {
         delete_transient('sbt_ban_' . md5($ip));
 
         // Optional: Log the unblock
-        error_log("[SBT] IP {$ip} successfully solved quiz and was unblocked.");
+        //error_log("[SBT] IP {$ip} successfully solved quiz and was unblocked.");
     }
 }
