@@ -15,7 +15,6 @@ class SBT_Detection_Layers {
         '/paypal-webhook',               // Custom PayPal endpoints
         '/stripe-webhook',               // Custom Stripe endpoints
         'admin-ajax.php',  // ← Whitelist all AJAX
-        '/wp-json/can/v1/update-profile',
     ];
 
     public function __construct() {
