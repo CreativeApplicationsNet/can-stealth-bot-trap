@@ -15,7 +15,6 @@ class SBT_Detection_Layers {
         '/paypal-webhook',               // Custom PayPal endpoints
         '/stripe-webhook',               // Custom Stripe endpoints
         'admin-ajax.php',  // ← Whitelist all AJAX
-        '/wp-json/can/v1/update-profile',
     ];
 
     public function __construct() {
@@ -58,18 +57,6 @@ class SBT_Detection_Layers {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $method = $_SERVER['REQUEST_METHOD'] ?? '';
 
-
-        // Allow REST API requests with Basic Auth (for mobile apps like CAN iOS)
-        // Check this BEFORE the POST method check since REST API uses GET
-        if (strpos($uri, '/wp-json/wp/v2/') !== false || strpos($uri, '/wp-json/can/v1/') !== false) {
-            if (isset($_SERVER['HTTP_AUTHORIZATION']) && strpos($_SERVER['HTTP_AUTHORIZATION'], 'Basic ') === 0) {
-                return true;
-            }
-            // Also check for PHP_AUTH_USER which some servers use
-            if (isset($_SERVER['PHP_AUTH_USER'])) {
-                return true;
-            }
-        }
 
         // Allow CAN iOS app OG image preview fetches (GET requests for page HTML)
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
