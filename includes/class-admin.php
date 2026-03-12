@@ -302,6 +302,20 @@ class SBT_Admin {
                     </tr>
 
                     <tr>
+                        <th>IP Blacklist (Permanently Blocked)</th>
+                        <td>
+                            <textarea name="<?= $this->option_key ?>[ip_blacklist]"
+                                   style="width: 100%; font-family: monospace;"
+                                   rows="6"><?= esc_textarea($opts['ip_blacklist'] ?? '') ?></textarea>
+                            <p class="description">
+                                Add IP addresses or CIDR ranges to permanently block. Blacklisted visitors are immediately shown an "Access Denied" page, bypassing all other checks.
+                                <br><strong>Format:</strong> One IP or CIDR range per line. Comments with <code>#</code> are supported.
+                                <br><strong>Note:</strong> Whitelisted IPs always take priority over the blacklist.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
                         <th>Enable JavaScript Check</th>
                         <td>
                             <input type="checkbox" name="<?= $this->option_key ?>[enable_js_check]"
@@ -503,6 +517,89 @@ class SBT_Admin {
                 <p><strong>All IPs have been unblocked.</strong></p>
             </div>';
         }
+
+        $conflicts = $this->get_blacklist_conflicts();
+        if (!empty($conflicts)) {
+            echo '<div class="notice notice-error">
+                <p><strong>IP Blacklist conflict detected.</strong> The following entries appear in both your whitelist and blacklist. Whitelisted IPs will always bypass the blacklist, so these blacklist entries have no effect:</p>
+                <ul style="list-style: disc; margin-left: 20px;">';
+            foreach ($conflicts as $conflict) {
+                echo '<li><code>' . esc_html($conflict) . '</code></li>';
+            }
+            echo '    </ul>
+            </div>';
+        }
+    }
+
+    private function get_blacklist_conflicts() {
+        $opts = $this->core->get_settings();
+        $whitelist_entries = $this->parse_ip_list($opts['ip_whitelist'] ?? '');
+        $blacklist_entries = $this->parse_ip_list($opts['ip_blacklist'] ?? '');
+
+        if (empty($whitelist_entries) || empty($blacklist_entries)) {
+            return [];
+        }
+
+        $conflicts = [];
+
+        foreach ($blacklist_entries as $bl) {
+            foreach ($whitelist_entries as $wl) {
+                // Exact duplicate
+                if ($bl === $wl) {
+                    $conflicts[] = $bl;
+                    continue 2;
+                }
+
+                // Blacklist CIDR would catch a whitelisted exact IP
+                if (strpos($bl, '/') !== false && strpos($wl, '/') === false) {
+                    if ($this->admin_ip_in_cidr($wl, $bl)) {
+                        $conflicts[] = $wl . ' (covered by blacklisted range ' . $bl . ')';
+                        continue 2;
+                    }
+                }
+
+                // Whitelist CIDR covers a blacklisted exact IP
+                if (strpos($wl, '/') !== false && strpos($bl, '/') === false) {
+                    if ($this->admin_ip_in_cidr($bl, $wl)) {
+                        $conflicts[] = $bl . ' (covered by whitelisted range ' . $wl . ')';
+                        continue 2;
+                    }
+                }
+            }
+        }
+
+        return array_unique($conflicts);
+    }
+
+    private function parse_ip_list($str) {
+        $entries = [];
+        foreach (array_filter(array_map('trim', explode("\n", $str))) as $line) {
+            if (empty($line) || strpos($line, '#') === 0) continue;
+            if (strpos($line, '#') !== false) {
+                $line = trim(substr($line, 0, strpos($line, '#')));
+            }
+            $line = trim($line);
+            if (!empty($line)) {
+                $entries[] = $line;
+            }
+        }
+        return $entries;
+    }
+
+    private function admin_ip_in_cidr($ip, $cidr) {
+        if (strpos($cidr, '/') === false) {
+            return $ip === $cidr;
+        }
+        list($subnet, $bits) = explode('/', $cidr);
+        $bits        = (int)$bits;
+        $ip_long     = ip2long($ip);
+        $subnet_long = ip2long($subnet);
+        if ($ip_long === false || $subnet_long === false) {
+            return false;
+        }
+        $mask = -1 << (32 - $bits);
+        $subnet_long &= $mask;
+        return ($ip_long & $mask) === $subnet_long;
     }
 
     private function render_logs_table($logs, $current_page, $total_pages) {

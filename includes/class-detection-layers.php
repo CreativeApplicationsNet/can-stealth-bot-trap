@@ -15,6 +15,7 @@ class SBT_Detection_Layers {
         '/paypal-webhook',               // Custom PayPal endpoints
         '/stripe-webhook',               // Custom Stripe endpoints
         'admin-ajax.php',  // ← Whitelist all AJAX
+        '/wp-json/can/v1/update-profile',
     ];
 
     public function __construct() {
@@ -27,7 +28,10 @@ class SBT_Detection_Layers {
         // 1. Process the quiz submission FIRST (Priority 1)
         add_action('init', [$this->core, 'handle_quiz_submission'], 1);
 
-        // 2. Run detection layers in order (Priority 5+)
+        // 2. Blacklist check runs before all other detection (Priority 4)
+        add_action('init', [$this, 'check_blacklist'], 4);
+
+        // 3. Run detection layers in order (Priority 5+)
         add_action('init', [$this, 'check_ban'], 5);
         add_action('init', [$this, 'trap_hidden_url'], 6);
         add_action('init', [$this, 'rate_limit'], 7);
@@ -65,6 +69,12 @@ class SBT_Detection_Layers {
             if (isset($_SERVER['PHP_AUTH_USER'])) {
                 return true;
             }
+        }
+
+        // Allow CAN iOS app OG image preview fetches (GET requests for page HTML)
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        if (strpos($ua, 'CANBot') !== false) {
+            return true;
         }
 
         // Webhooks are almost always POST requests
@@ -434,9 +444,31 @@ class SBT_Detection_Layers {
         return null;
     }
 
+    public function check_blacklist() {
+        if (!$this->core->should_protect()) return;
+        if ($this->core->is_whitelisted_bot()) return;
+        if ($this->is_webhook_request()) return;
+        if ($this->is_whitelisted_ip()) return;
+
+        $ip = $this->core->get_client_ip();
+        //error_log('[SBT] check_blacklist() — visitor IP: ' . $ip);
+
+        if ($this->core->is_blacklisted_ip()) {
+            error_log('[SBT] Blacklisted IP blocked: ' . $ip);
+            $this->block_blacklisted();
+        }
+    }
+
     /* ---------------------------
      * BLOCK HANDLER
      * ------------------------- */
+
+    private function block_blacklisted() {
+        if (!defined('SBT_BLACKLISTED_MODE')) {
+            define('SBT_BLACKLISTED_MODE', true);
+        }
+        $this->block('blacklisted');
+    }
 
     private function block($reason = 'blocked') {
         global $sbt_core;

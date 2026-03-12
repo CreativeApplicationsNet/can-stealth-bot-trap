@@ -138,34 +138,52 @@ http_response_code($status_code);
         }
     </style>
 </head>
+
 <body>
     <div class="box">
-        <?php if ($is_quiz_mode): ?>
-            <h1>Are you human?</h1>
-            <p>Please solve this simple math problem to prove you are not a bot.</p>
+        <div class="header"><?php bloginfo( 'name' ); ?></div>
+        <div class="content">
+          <?php if ($reason === 'blacklisted'): ?>
+              <h1>Access Denied</h1>
+              <p>Your access has been restricted.</p>
+          <?php elseif ($is_quiz_mode): ?>
+              <h1>Are you human?</h1>
+              <p>Please solve this simple math problem to prove you are not a bot.</p>
 
-            <div class="quiz-form">
-                <form method="POST" action="">
-                    <?php wp_nonce_field('sbt_solve_quiz', 'sbt_quiz_nonce'); ?>
-                    <div class="quiz-question">
-                        <?php echo esc_html($quiz_text); ?>
-                    </div>
-                    <input type="number" name="sbt_quiz_answer" class="quiz-input" required autofocus>
-                    <button type="submit" class="quiz-submit">Submit</button>
-                </form>
-            </div>
+              <div class="quiz-form">
+                  <form method="POST" action="">
+                      <?php wp_nonce_field('sbt_solve_quiz', 'sbt_quiz_nonce'); ?>
+                      <div class="quiz-question">
+                          <?php echo esc_html($quiz_text); ?>
+                      </div>
+                      <input id="sbt_quiz_answer" type="number" name="sbt_quiz_answer" class="quiz-input" required autofocus>
+                      <button type="submit" class="quiz-submit">Submit</button>
+                  </form>
+              </div>
 
-        <?php elseif ($is_rate_limit): ?>
-            <h1>Too Many Requests</h1>
-            <p>You've made too many requests in a short period of time.</p>
-            <p>Please come back later.</p>
-        <?php else: ?>
-            <h1>Access Denied</h1>
-            <p>Your access has been restricted for security reasons.</p>
-            <p>Please come back later.</p>
-        <?php endif; ?>
+          <?php elseif ($is_rate_limit): ?>
+              <h1>Too Many Requests</h1>
+              <p>You've made too many requests in a short period of time.</p>
+              <p>Please come back later.</p>
+          <?php else: ?>
+              <h1>Access Denied</h1>
+              <p>Your access has been restricted for security reasons.</p>
+              <p>Please come back later.</p>
+          <?php endif; ?>
+        </div>
 
-        <small><?php bloginfo( 'name' ); ?></small>
+        <small>©<?php echo date("Y"); ?> <?php bloginfo( 'name' ); ?></small>
+
+        <script>
+            // Focus on input when page loads
+            document.addEventListener('DOMContentLoaded', function() {
+                const input = document.getElementById('sbt_quiz_answer');
+                if (input) {
+                    input.focus();
+                }
+            });
+        </script>
+
     </div>
 </body>
 </html>

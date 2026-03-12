@@ -122,6 +122,7 @@ class SBT_Stealth_Bot_Trap {
              'enable_geo_quiz' => 0,
              'geo_quiz_countries' => '',
              'honeypot_url' => 'bot-trap',
+            'ip_blacklist' => '',
          ];
 
          $settings = get_option($this->option_key, $defaults);
@@ -502,5 +503,72 @@ class SBT_Stealth_Bot_Trap {
 
         // Optional: Log the unblock
         //error_log("[SBT] IP {$ip} successfully solved quiz and was unblocked.");
+    }
+
+    /* ---------------------------
+     * BLACKLIST METHODS
+     * ------------------------- */
+
+    public function is_blacklisted_ip() {
+        $ip = $this->get_client_ip();
+        $settings = $this->get_settings();
+
+        $blacklist_str = isset($settings['ip_blacklist']) ? $settings['ip_blacklist'] : '';
+
+        if (empty($blacklist_str)) {
+            return false;
+        }
+
+        $lines = array_filter(array_map('trim', explode("\n", $blacklist_str)));
+
+        foreach ($lines as $line) {
+            if (empty($line) || strpos($line, '#') === 0) {
+                continue;
+            }
+
+            // Strip inline comments
+            if (strpos($line, '#') !== false) {
+                $line = trim(substr($line, 0, strpos($line, '#')));
+            }
+
+            $line = trim($line);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            if (strpos($line, '/') !== false) {
+                if ($this->ip_in_cidr($ip, $line)) {
+                    return true;
+                }
+            } else {
+                if ($ip === $line) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function ip_in_cidr($ip, $cidr) {
+        if (strpos($cidr, '/') === false) {
+            return $ip === $cidr;
+        }
+
+        list($subnet, $bits) = explode('/', $cidr);
+        $bits = (int)$bits;
+
+        $ip_long     = ip2long($ip);
+        $subnet_long = ip2long($subnet);
+
+        if ($ip_long === false || $subnet_long === false) {
+            return false;
+        }
+
+        $mask = -1 << (32 - $bits);
+        $subnet_long &= $mask;
+
+        return ($ip_long & $mask) === $subnet_long;
     }
 }
