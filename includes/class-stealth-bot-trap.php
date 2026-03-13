@@ -551,6 +551,54 @@ class SBT_Stealth_Bot_Trap {
         return false;
     }
 
+    /* ---------------------------
+     * HTACCESS BLACKLIST SYNC
+     * ------------------------- */
+
+    public function write_blacklist_to_htaccess() {
+        $settings = $this->get_settings();
+        $htaccess = ABSPATH . '.htaccess';
+
+        if ( ! is_writable( $htaccess ) ) {
+            error_log( '[SBT] .htaccess is not writable — blacklist not synced.' );
+            return false;
+        }
+
+        $blacklist_str = isset( $settings['ip_blacklist'] ) ? $settings['ip_blacklist'] : '';
+        $lines         = array_filter( array_map( 'trim', explode( "\n", $blacklist_str ) ) );
+
+        $entries = [];
+
+        foreach ( $lines as $line ) {
+            if ( empty( $line ) || strpos( $line, '#' ) === 0 ) continue;
+            if ( strpos( $line, '#' ) !== false ) {
+                $line = trim( substr( $line, 0, strpos( $line, '#' ) ) );
+            }
+            $line = trim( $line );
+            if ( ! empty( $line ) ) {
+                $entries[] = $line;
+            }
+        }
+
+        $block = [];
+
+        if ( ! empty( $entries ) ) {
+            $block[] = '<IfModule mod_authz_core.c>';
+            $block[] = '<RequireAll>';
+            $block[] = 'Require all granted';
+            foreach ( $entries as $entry ) {
+                $block[] = 'Require not ip ' . $entry;
+            }
+            $block[] = '</RequireAll>';
+            $block[] = '</IfModule>';
+        }
+
+        insert_with_markers( $htaccess, 'SBT Blacklist', $block );
+
+        error_log( '[SBT] .htaccess blacklist synced: ' . count( $entries ) . ' entries.' );
+        return true;
+    }
+
     private function ip_in_cidr($ip, $cidr) {
         if (strpos($cidr, '/') === false) {
             return $ip === $cidr;

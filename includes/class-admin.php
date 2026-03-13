@@ -3,7 +3,7 @@ if (!defined('ABSPATH')) exit;
 
 class SBT_Admin {
     private $core;
-    private $dashboard;   
+    private $dashboard;
     private $option_key = 'sbt_settings';
 
     public function __construct($core_instance) {
@@ -19,6 +19,7 @@ class SBT_Admin {
             add_action('admin_post_sbt_clear_logs', [$this, 'clear_logs']);
             add_action('admin_post_sbt_remove_ip', [$this, 'remove_ip']);
             add_action('admin_post_sbt_unblock_all', [$this, 'unblock_all']);
+            add_action('update_option_sbt_settings', [$this, 'sync_blacklist_to_htaccess'], 10, 2);
 
             add_filter('dashboard_glance_items', [$this, 'add_sbt_glance_item']);
         }
@@ -308,9 +309,9 @@ class SBT_Admin {
                                    style="width: 100%; font-family: monospace;"
                                    rows="6"><?= esc_textarea($opts['ip_blacklist'] ?? '') ?></textarea>
                             <p class="description">
-                                Add IP addresses or CIDR ranges to permanently block. Blacklisted visitors are immediately shown an "Access Denied" page, bypassing all other checks.
+                                Add IP addresses or CIDR ranges to permanently block. Blacklisted IPs are denied at the server level before WordPress or the cache loads — zero processing cost.
                                 <br><strong>Format:</strong> One IP or CIDR range per line. Comments with <code>#</code> are supported.
-                                <br><strong>Note:</strong> Whitelisted IPs always take priority over the blacklist.
+                                <br><strong>Note:</strong> If an IP appears in both lists, the blacklist takes priority — it will be denied at the server level before the whitelist is checked.
                             </p>
                         </td>
                     </tr>
@@ -520,8 +521,8 @@ class SBT_Admin {
 
         $conflicts = $this->get_blacklist_conflicts();
         if (!empty($conflicts)) {
-            echo '<div class="notice notice-error">
-                <p><strong>IP Blacklist conflict detected.</strong> The following entries appear in both your whitelist and blacklist. Whitelisted IPs will always bypass the blacklist, so these blacklist entries have no effect:</p>
+            echo '<div class="notice notice-warning">
+                <p><strong>IP conflict detected.</strong> The following entries appear in both your whitelist and blacklist. The blacklist takes priority — these IPs will be denied at the server level before the whitelist is checked:</p>
                 <ul style="list-style: disc; margin-left: 20px;">';
             foreach ($conflicts as $conflict) {
                 echo '<li><code>' . esc_html($conflict) . '</code></li>';
@@ -666,6 +667,19 @@ class SBT_Admin {
         </form>
 
         <?php
+    }
+
+    /* ---------------------------
+     * HTACCESS SYNC
+     * ------------------------- */
+
+    public function sync_blacklist_to_htaccess( $old_value, $new_value ) {
+        $old_blacklist = isset( $old_value['ip_blacklist'] ) ? $old_value['ip_blacklist'] : '';
+        $new_blacklist = isset( $new_value['ip_blacklist'] ) ? $new_value['ip_blacklist'] : '';
+
+        if ( $old_blacklist !== $new_blacklist ) {
+            $this->core->write_blacklist_to_htaccess();
+        }
     }
 
     /* ---------------------------
