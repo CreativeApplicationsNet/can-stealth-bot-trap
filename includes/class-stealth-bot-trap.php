@@ -583,14 +583,33 @@ class SBT_Stealth_Bot_Trap {
         $block = [];
 
         if ( ! empty( $entries ) ) {
-            $block[] = '<IfModule mod_authz_core.c>';
-            $block[] = '<RequireAll>';
-            $block[] = 'Require all granted';
+            $block[] = 'Order Deny,Allow';
             foreach ( $entries as $entry ) {
-                $block[] = 'Require not ip ' . $entry;
+                // Convert entry to regex: escape dots, strip CIDR suffix for prefix match
+                if ( strpos( $entry, '/' ) !== false ) {
+                    // CIDR range — use the network prefix as a regex prefix match
+                    list( $ip, $bits ) = explode( '/', $entry );
+                    $bits = (int) $bits;
+                    $parts = explode( '.', $ip );
+
+                    if ( $bits >= 24 ) {
+                        $pattern = preg_quote( $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.', '/' );
+                    } elseif ( $bits >= 16 ) {
+                        $pattern = preg_quote( $parts[0] . '.' . $parts[1] . '.', '/' );
+                    } elseif ( $bits >= 8 ) {
+                        $pattern = preg_quote( $parts[0] . '.', '/' );
+                    } else {
+                        continue; // Too broad to express as prefix, skip
+                    }
+                } else {
+                    // Exact IP — escape dots for regex
+                    $pattern = str_replace( '.', '\.', $entry );
+                }
+
+                $block[] = 'SetEnvIf X-Forwarded-For "' . $pattern . '" DenyAccess';
+                $block[] = 'SetEnvIf REMOTE_ADDR "' . $pattern . '" DenyAccess';
             }
-            $block[] = '</RequireAll>';
-            $block[] = '</IfModule>';
+            $block[] = 'Deny from env=DenyAccess';
         }
 
         insert_with_markers( $htaccess, 'SBT Blacklist', $block );
