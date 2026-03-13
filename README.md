@@ -32,6 +32,8 @@ This plugin is provided free of charge and is open-source. If you are finding it
 
 - **IP Whitelist** - Maintain a whitelist of trusted IP addresses and CIDR ranges that bypass all protection checks. Perfect for payment processors, third-party webhooks, APIs, and trusted partners.
 
+- **IP Blacklist** - Permanently block known malicious IP addresses and CIDR ranges. Blacklisted IPs are denied at the server level via `.htaccess` before WordPress or the page cache loads — zero processing cost. The blacklist is automatically synced to `.htaccess` whenever you save the settings. Supports both exact IPs and CIDR ranges with `#` comment support.
+
 - **Webhook Support** - PayPal, Stripe, and WooCommerce webhooks are automatically whitelisted via their request paths, so they work out of the box without needing IP configuration.
 
 ### Block Modes
@@ -47,6 +49,8 @@ This plugin is provided free of charge and is open-source. If you are finding it
   - Current active ban count
   - Ban reason breakdown (top 3 reasons)
   - Last 24-hour statistics (unique IPs blocked and total blocks)
+
+- **Subnet Attack Analysis** - Automatically analyses the active ban log to identify attacking IP ranges. When 20+ IPs from the same `/24` or `/16` subnet are banned, the subnet is surfaced as a suggested blacklist entry with a one-click "Add to Blacklist" button. Only runs when there are 20+ total banned IPs to avoid false positives.
 
 - **Active Bans Log** - Displays all currently active IP bans with:
   - IP address
@@ -189,6 +193,13 @@ Visitor accesses custom honeypot URL → Whitelist check (not whitelisted, conti
 - Test mode (log only, don't block)
 - Custom block page display
 
+### IP Blacklist
+- Add IP addresses or CIDR ranges to permanently block at server level
+- Automatically synced to `.htaccess` on save — fires before WordPress and page cache
+- Works behind reverse proxies via `X-Forwarded-For` header
+- Support for inline `#` comments
+- One-click adding of suggested subnets from the attack analysis panel
+
 ### IP Whitelist
 - Pre-loaded with PayPal and Stripe webhook server IPs
 - Add, edit, or delete trusted IP addresses and CIDR ranges
@@ -236,6 +247,12 @@ The admin dashboard provides a quick overview of your site's protection status:
 - Visual bar chart showing bans over the last configured hours
 - Color-coded by ban reason for easy pattern recognition
 - Interactive tooltips showing details per time period
+
+**Suggested Blacklist Entries**
+- Automatically surfaces attacking subnets based on ban log analysis
+- Shows `/24` and `/16` ranges with 20+ banned IPs from the same range
+- One-click "Add to Blacklist" button per suggestion
+- Only shown when ban log contains 20+ entries
 
 **Blocked IPs Log**
 - Paginated list of all active bans
