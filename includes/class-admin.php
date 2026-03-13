@@ -19,6 +19,7 @@ class SBT_Admin {
             add_action('admin_post_sbt_clear_logs', [$this, 'clear_logs']);
             add_action('admin_post_sbt_remove_ip', [$this, 'remove_ip']);
             add_action('admin_post_sbt_unblock_all', [$this, 'unblock_all']);
+            add_action('admin_post_sbt_add_suggested_subnet', [$this, 'add_suggested_subnet']);
             add_action('update_option_sbt_settings', [$this, 'sync_blacklist_to_htaccess'], 10, 2);
 
             add_filter('dashboard_glance_items', [$this, 'add_sbt_glance_item']);
@@ -465,6 +466,8 @@ class SBT_Admin {
 
             <?php $this->render_ban_chart(); ?>
 
+            <?php $this->render_suggested_subnets(); ?>
+
             <h2>Blocked IPs Log (Active Only) — <?= $total_logs ?> total records</h2>
             <?php $this->render_logs_table($logs, $current_page, $total_pages); ?>
         </div>
@@ -501,6 +504,12 @@ class SBT_Admin {
     }
 
     private function render_notices() {
+        if (isset($_GET['subnet_added'])) {
+            echo '<div class="notice notice-success is-dismissible">
+                <p><strong>' . esc_html($_GET['subnet_added']) . ' has been added to the blacklist.</strong></p>
+            </div>';
+        }
+
         if (isset($_GET['unblocked'])) {
             echo '<div class="notice notice-success is-dismissible">
                 <p><strong>IP ' . esc_html($_GET['unblocked']) . ' has been unblocked.</strong></p>
@@ -667,6 +676,157 @@ class SBT_Admin {
         </form>
 
         <?php
+    }
+
+    /* ---------------------------
+     * SUBNET SUGGESTIONS
+     * ------------------------- */
+
+    private function get_suggested_subnets() {
+        global $wpdb;
+        $current_time = current_time('mysql');
+
+        // Get all currently active banned IPs
+        $banned_ips = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT DISTINCT ip FROM {$wpdb->prefix}sbt_blocked_ips
+                 WHERE expires_at > %s",
+                $current_time
+            )
+        );
+
+        if ( empty( $banned_ips ) ) {
+            return [];
+        }
+
+        if ( count( $banned_ips ) < 20 ) {
+            return [];
+        }
+
+        $settings = $this->core->get_settings();
+        $blacklist_str = isset( $settings['ip_blacklist'] ) ? $settings['ip_blacklist'] : '';
+        $already_blocked = $this->parse_ip_list( $blacklist_str );
+
+        $slash24 = [];
+        $slash16 = [];
+
+        foreach ( $banned_ips as $ip ) {
+            if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) continue;
+
+            $parts = explode( '.', $ip );
+
+            $net24 = $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.0/24';
+            $net16 = $parts[0] . '.' . $parts[1] . '.0.0/16';
+
+            $slash24[ $net24 ] = ( $slash24[ $net24 ] ?? 0 ) + 1;
+            $slash16[ $net16 ] = ( $slash16[ $net16 ] ?? 0 ) + 1;
+        }
+
+        $suggestions = [];
+
+        // /24 suggestions: 20+ IPs from same subnet
+        foreach ( $slash24 as $subnet => $count ) {
+            if ( $count < 20 ) continue;
+            if ( $this->is_already_covered( $subnet, $already_blocked ) ) continue;
+            $suggestions[] = [
+                'subnet' => $subnet,
+                'count'  => $count,
+                'type'   => '/24',
+            ];
+        }
+
+        // /16 suggestions: 20+ IPs from same /16
+        foreach ( $slash16 as $subnet => $count ) {
+            if ( $count < 20 ) continue;
+            if ( $this->is_already_covered( $subnet, $already_blocked ) ) continue;
+            $suggestions[] = [
+                'subnet' => $subnet,
+                'count'  => $count,
+                'type'   => '/16',
+            ];
+        }
+
+        // Sort by count descending
+        usort( $suggestions, function( $a, $b ) {
+            return $b['count'] - $a['count'];
+        });
+
+        return $suggestions;
+    }
+
+    private function is_already_covered( $subnet, $already_blocked ) {
+        foreach ( $already_blocked as $blocked ) {
+            if ( $blocked === $subnet ) return true;
+            // Check if the suggested subnet is within an already-blocked broader range
+            if ( strpos( $blocked, '/' ) !== false ) {
+                list( $net, $bits ) = explode( '/', $subnet );
+                if ( $this->admin_ip_in_cidr( $net, $blocked ) ) return true;
+            }
+        }
+        return false;
+    }
+
+    public function render_suggested_subnets() {
+        $suggestions = $this->get_suggested_subnets();
+
+        if ( empty( $suggestions ) ) return;
+        ?>
+        <h2>Suggested Blacklist Entries</h2>
+        <p style="color:#666;">These subnets have multiple actively banned IPs. Consider adding them to your blacklist to block at the server level.</p>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th>Subnet</th>
+                    <th>Type</th>
+                    <th>Banned IPs in Range</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $suggestions as $s ) : ?>
+                    <tr>
+                        <td><code><?= esc_html( $s['subnet'] ) ?></code></td>
+                        <td><?= esc_html( $s['type'] ) ?></td>
+                        <td><?= esc_html( $s['count'] ) ?></td>
+                        <td>
+                            <form method="post" action="<?= admin_url('admin-post.php') ?>" style="display:inline;">
+                                <input type="hidden" name="action" value="sbt_add_suggested_subnet">
+                                <input type="hidden" name="subnet" value="<?= esc_attr( $s['subnet'] ) ?>">
+                                <?php wp_nonce_field('sbt_add_suggested_subnet_nonce'); ?>
+                                <button type="submit" class="button button-primary button-small">Add to Blacklist</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+    }
+
+    public function add_suggested_subnet() {
+        if ( ! current_user_can('manage_options') ) wp_die('Unauthorized');
+        if ( ! isset($_POST['_wpnonce']) || ! wp_verify_nonce($_POST['_wpnonce'], 'sbt_add_suggested_subnet_nonce') ) {
+            wp_die('Security check failed');
+        }
+
+        $subnet = isset( $_POST['subnet'] ) ? sanitize_text_field( $_POST['subnet'] ) : '';
+
+        if ( empty( $subnet ) ) wp_die('Invalid subnet');
+
+        $settings = $this->core->get_settings();
+        $blacklist = isset( $settings['ip_blacklist'] ) ? trim( $settings['ip_blacklist'] ) : '';
+
+        // Append subnet with a comment
+        $blacklist .= ( empty( $blacklist ) ? '' : "\n" ) . $subnet . ' # auto-suggested';
+
+        $settings['ip_blacklist'] = $blacklist;
+        update_option('sbt_settings', $settings);
+
+        // Sync to .htaccess
+        $this->core->write_blacklist_to_htaccess();
+
+        wp_redirect( admin_url('options-general.php?page=stealth-bot-trap&subnet_added=' . urlencode($subnet)) );
+        exit;
     }
 
     /* ---------------------------
